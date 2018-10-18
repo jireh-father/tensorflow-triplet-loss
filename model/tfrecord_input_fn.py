@@ -1,7 +1,5 @@
 """Create the input data pipeline using `tf.data`"""
 
-import tensorflow as tf
-
 from model import tfrecords_dataset as td
 
 
