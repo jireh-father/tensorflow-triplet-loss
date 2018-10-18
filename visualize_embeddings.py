@@ -66,18 +66,6 @@ if __name__ == '__main__':
 
     tf.logging.info("Embeddings shape: {}".format(embeddings.shape))
 
-    with tf.Session() as sess:
-        # TODO (@omoindrot): remove the hard-coded 10000
-        # Obtain the test labels
-        if args.dataset_name == "mnist":
-            dataset = mnist_dataset.test(args.data_dir)
-        else:
-            dataset = tfrecords_dataset.test(args.data_dir)
-        dataset = dataset.map(lambda img, lab: lab)
-        dataset = dataset.batch(emb_size)
-        labels_tensor = dataset.make_one_shot_iterator().get_next()
-        labels = sess.run(labels_tensor)
-
     # Visualize test embeddings
     # sess.graph._unsafe_unfinalize()
     embedding_var = tf.Variable(embeddings, name='embed_embedding')
@@ -94,6 +82,18 @@ if __name__ == '__main__':
     shutil.copy2(args.sprite_filename, eval_dir)
     embedding.sprite.image_path = pathlib.Path(args.sprite_filename).name
     embedding.sprite.single_image_dim.extend([28, 28])
+
+    with tf.Session() as sess:
+        # TODO (@omoindrot): remove the hard-coded 10000
+        # Obtain the test labels
+        if args.dataset_name == "mnist":
+            dataset = mnist_dataset.test(args.data_dir)
+        else:
+            dataset = tfrecords_dataset.test(args.data_dir)
+        dataset = dataset.map(lambda img, lab: lab)
+        dataset = dataset.batch(emb_size)
+        labels_tensor = dataset.make_one_shot_iterator().get_next()
+        labels = sess.run(labels_tensor)
 
     # Specify where you find the metadata
     # Save the metadata file needed for Tensorboard projector
