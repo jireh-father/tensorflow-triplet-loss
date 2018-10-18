@@ -56,7 +56,7 @@ if __name__ == '__main__':
     # TODO (@omoindrot): remove the hard-coded 10000
     emb_size = params.eval_size
     if emb_size > max_emb_size:
-        emb_size = max_emb_size
+        emb_size = max_emb_size - 1
     embeddings = np.zeros((emb_size, params.embedding_size))
     for i, p in enumerate(predictions):
         embeddings[i] = p['embeddings']
@@ -84,7 +84,7 @@ if __name__ == '__main__':
         # Obtain the test labels
         dataset = mnist_dataset.test(args.data_dir)
         dataset = dataset.map(lambda img, lab: lab)
-        dataset = dataset.batch(10000)
+        dataset = dataset.batch(emb_size)
         labels_tensor = dataset.make_one_shot_iterator().get_next()
         labels = sess.run(labels_tensor)
 
@@ -92,7 +92,7 @@ if __name__ == '__main__':
     # Save the metadata file needed for Tensorboard projector
     metadata_filename = "mnist_metadata.tsv"
     with open(os.path.join(eval_dir, metadata_filename), 'w') as f:
-        for i in range(params.eval_size):
+        for i in range(emb_size):
             c = labels[i]
             f.write('{}\n'.format(c))
     embedding.metadata_path = metadata_filename
