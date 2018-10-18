@@ -36,9 +36,13 @@ if __name__ == '__main__':
 
     # Define the model
     tf.logging.info("Creating the model...")
+    tf_config = tf.ConfigProto()
+    tf_config.gpu_options.allow_growth = True
     config = tf.estimator.RunConfig(tf_random_seed=230,
                                     model_dir=args.model_dir,
-                                    save_summary_steps=params.save_summary_steps)
+                                    save_summary_steps=params.save_summary_steps,
+                                    session_config=tf_config)
+
     estimator = tf.estimator.Estimator(model_fn, params=params, config=config)
     if args.dataset_name == "tfrecord":
         train_input_fn = tfrecord_input_fn.train_input_fn
