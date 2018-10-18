@@ -4,6 +4,7 @@ import tensorflow as tf
 
 from model.triplet_loss import batch_all_triplet_loss
 from model.triplet_loss import batch_hard_triplet_loss
+from model import nets_factory
 
 
 def build_model(is_training, images, params):
@@ -25,7 +26,7 @@ def build_model(is_training, images, params):
     bn_momentum = params.bn_momentum
     channels = [num_channels, num_channels * 2]
     for i, c in enumerate(channels):
-        with tf.variable_scope('block_{}'.format(i+1)):
+        with tf.variable_scope('block_{}'.format(i + 1)):
             out = tf.layers.conv2d(out, c, 3, padding='same')
             if params.use_batch_norm:
                 out = tf.layers.batch_normalization(out, momentum=bn_momentum, training=is_training)
@@ -37,6 +38,25 @@ def build_model(is_training, images, params):
     out = tf.reshape(out, [-1, 7 * 7 * num_channels * 2])
     with tf.variable_scope('fc_1'):
         out = tf.layers.dense(out, params.embedding_size)
+
+    return out
+
+
+def build_alexnet(is_training, images, params):
+    """Compute outputs of the model (embeddings for triplet loss).
+
+    Args:
+        is_training: (bool) whether we are training or not
+        images: (dict) contains the inputs of the graph (features)
+                this can be `tf.placeholder` or outputs of `tf.data`
+        params: (Params) hyperparameters
+
+    Returns:
+        output: (tf.Tensor) output of the model
+    """
+    weight_decay = 0.
+    model_f = nets_factory.get_network_fn("alexnet_v2", params.embedding_size, weight_decay, is_training=is_training)
+    out, _ = model_f(images)
 
     return out
 
@@ -56,14 +76,18 @@ def model_fn(features, labels, mode, params):
     is_training = (mode == tf.estimator.ModeKeys.TRAIN)
 
     images = features
-    images = tf.reshape(images, [-1, params.image_size, params.image_size, 1])
-    assert images.shape[1:] == [params.image_size, params.image_size, 1], "{}".format(images.shape)
+    if len(images.get_shape()) == 2:
+        images = tf.reshape(images, [-1, params.image_size, params.image_size, 1])
+        assert images.shape[1:] == [params.image_size, params.image_size, 1], "{}".format(images.shape)
 
     # -----------------------------------------------------------
     # MODEL: define the layers of the model
     with tf.variable_scope('model'):
         # Compute the embeddings with the model
-        embeddings = build_model(is_training, images, params)
+        if params.model_name == "alexnet_v2":
+            embeddings = build_alexnet(is_training, images, params)
+        else:
+            embeddings = build_model(is_training, images, params)
     embedding_mean_norm = tf.reduce_mean(tf.norm(embeddings, axis=1))
     tf.summary.scalar("embedding_mean_norm", embedding_mean_norm)
 
@@ -95,7 +119,6 @@ def model_fn(features, labels, mode, params):
 
     if mode == tf.estimator.ModeKeys.EVAL:
         return tf.estimator.EstimatorSpec(mode, loss=loss, eval_metric_ops=eval_metric_ops)
-
 
     # Summaries for training
     tf.summary.scalar('loss', loss)

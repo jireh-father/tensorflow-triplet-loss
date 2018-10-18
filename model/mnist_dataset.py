@@ -39,8 +39,8 @@ def check_image_file_header(filename):
             raise ValueError('Invalid magic number %d in MNIST file %s' % (magic, f.name))
         if rows != 28 or cols != 28:
             raise ValueError(
-                    'Invalid MNIST file %s: Expected 28x28 images, found %dx%d' %
-                    (f.name, rows, cols))
+                'Invalid MNIST file %s: Expected 28x28 images, found %dx%d' %
+                (f.name, rows, cols))
 
 
 def check_labels_file_header(filename):

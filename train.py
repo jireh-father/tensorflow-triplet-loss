@@ -5,18 +5,22 @@ import os
 
 import tensorflow as tf
 
-from model.input_fn import train_input_fn
-from model.input_fn import test_input_fn
+from model import input_fn
+from model import tfrecord_input_fn
 from model.model_fn import model_fn
 from model.utils import Params
 
-
 parser = argparse.ArgumentParser()
-parser.add_argument('--model_dir', default='experiments/base_model',
+# parser.add_argument('--model_dir', default='experiments/base_model',
+#                     help="Experiment directory containing params.json")
+parser.add_argument('--model_dir', default='experiments/alexnet',
                     help="Experiment directory containing params.json")
-parser.add_argument('--data_dir', default='data/mnist',
+parser.add_argument('--data_dir', default='D:/data/deep_fashion/In-shop Clothes Retrieval Benchmark/tfrecord',
                     help="Directory containing the dataset")
-
+parser.add_argument('--dataset_name', default='tfrecord',
+                    help="Directory containing the dataset")
+# parser.add_argument('--data_dir', default='./data/mnist',
+#                     help="Directory containing the dataset")
 
 if __name__ == '__main__':
     tf.reset_default_graph()
@@ -34,6 +38,12 @@ if __name__ == '__main__':
                                     model_dir=args.model_dir,
                                     save_summary_steps=params.save_summary_steps)
     estimator = tf.estimator.Estimator(model_fn, params=params, config=config)
+    if args.dataset_name == "tfrecord":
+        train_input_fn = tfrecord_input_fn.train_input_fn
+        test_input_fn = tfrecord_input_fn.test_input_fn
+    else:
+        train_input_fn = input_fn.train_input_fn
+        test_input_fn = input_fn.test_input_fn
 
     # Train the model
     tf.logging.info("Starting training for {} epoch(s).".format(params.num_epochs))
