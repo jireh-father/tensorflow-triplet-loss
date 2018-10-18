@@ -33,10 +33,8 @@ if __name__ == '__main__':
     estimator = tf.estimator.Estimator(model_fn, params=params, model_dir=args.model_dir)
 
     if args.dataset_name == "tfrecord":
-        train_input_fn = tfrecord_input_fn.train_input_fn
         test_input_fn = tfrecord_input_fn.test_input_fn
     else:
-        train_input_fn = input_fn.train_input_fn
         test_input_fn = input_fn.test_input_fn
     # Evaluate the model on the test set
     tf.logging.info("Evaluation on the test set.")
