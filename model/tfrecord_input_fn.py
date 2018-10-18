@@ -2,7 +2,7 @@
 
 import tensorflow as tf
 
-import model.tfrecord_dataset as tfrecord_dataset
+from model import tfrecord_dataset
 
 
 def train_input_fn(data_dir, params):
