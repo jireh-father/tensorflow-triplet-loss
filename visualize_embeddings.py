@@ -15,6 +15,7 @@ from model.model_fn import model_fn
 from model import input_fn
 from model import tfrecord_input_fn
 
+max_emb_size = 10000
 parser = argparse.ArgumentParser()
 parser.add_argument('--model_dir', default='experiments/base_model',
                     help="Experiment directory containing params.json")
@@ -53,7 +54,10 @@ if __name__ == '__main__':
     predictions = estimator.predict(lambda: test_input_fn(args.data_dir, params))
 
     # TODO (@omoindrot): remove the hard-coded 10000
-    embeddings = np.zeros((10000, params.embedding_size))
+    emb_size = params.eval_size
+    if emb_size > max_emb_size:
+        emb_size = max_emb_size
+    embeddings = np.zeros((emb_size, params.embedding_size))
     for i, p in enumerate(predictions):
         embeddings[i] = p['embeddings']
 
