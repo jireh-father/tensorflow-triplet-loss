@@ -5,17 +5,18 @@ import os
 
 import tensorflow as tf
 
-from model.input_fn import test_input_fn
+from model import input_fn
+from model import tfrecord_input_fn
 from model.model_fn import model_fn
 from model.utils import Params
-
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--model_dir', default='experiments/base_model',
                     help="Experiment directory containing params.json")
 parser.add_argument('--data_dir', default='data/mnist',
                     help="Directory containing the dataset")
-
+parser.add_argument('--dataset_name', default='mnist',
+                    help="Directory containing the dataset")
 
 if __name__ == '__main__':
     tf.reset_default_graph()
@@ -31,6 +32,12 @@ if __name__ == '__main__':
     tf.logging.info("Creating the model...")
     estimator = tf.estimator.Estimator(model_fn, params=params, model_dir=args.model_dir)
 
+    if args.dataset_name == "tfrecord":
+        train_input_fn = tfrecord_input_fn.train_input_fn
+        test_input_fn = tfrecord_input_fn.test_input_fn
+    else:
+        train_input_fn = input_fn.train_input_fn
+        test_input_fn = input_fn.test_input_fn
     # Evaluate the model on the test set
     tf.logging.info("Evaluation on the test set.")
     res = estimator.evaluate(lambda: test_input_fn(args.data_dir, params))
