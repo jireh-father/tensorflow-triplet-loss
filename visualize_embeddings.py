@@ -9,7 +9,8 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.contrib.tensorboard.plugins import projector
 
-import model.mnist_dataset as mnist_dataset
+from model import mnist_dataset
+from model import tfrecords_dataset
 from model.utils import Params
 from model.model_fn import model_fn
 from model import input_fn
@@ -65,10 +66,21 @@ if __name__ == '__main__':
 
     tf.logging.info("Embeddings shape: {}".format(embeddings.shape))
 
+    with tf.Session() as sess:
+        # TODO (@omoindrot): remove the hard-coded 10000
+        # Obtain the test labels
+        if args.dataset_name == "mnist":
+            dataset = mnist_dataset.test(args.data_dir)
+        else:
+            dataset = tfrecords_dataset.test(args.data_dir)
+        dataset = dataset.map(lambda img, lab: lab)
+        dataset = dataset.batch(emb_size)
+        labels_tensor = dataset.make_one_shot_iterator().get_next()
+        labels = sess.run(labels_tensor)
+
     # Visualize test embeddings
-    sess = tf.Session()
-    sess.graph._unsafe_unfinalize()
-    embedding_var = tf.Variable(embeddings, name='mnist_embedding')
+    # sess.graph._unsafe_unfinalize()
+    embedding_var = tf.Variable(embeddings, name='embed_embedding')
 
     eval_dir = os.path.join(args.model_dir, "eval")
     summary_writer = tf.summary.FileWriter(eval_dir)
@@ -83,18 +95,9 @@ if __name__ == '__main__':
     embedding.sprite.image_path = pathlib.Path(args.sprite_filename).name
     embedding.sprite.single_image_dim.extend([28, 28])
 
-    # with tf.Session() as sess:
-    # TODO (@omoindrot): remove the hard-coded 10000
-    # Obtain the test labels
-    dataset = mnist_dataset.test(args.data_dir)
-    dataset = dataset.map(lambda img, lab: lab)
-    dataset = dataset.batch(emb_size)
-    labels_tensor = dataset.make_one_shot_iterator().get_next()
-    labels = sess.run(labels_tensor)
-
     # Specify where you find the metadata
     # Save the metadata file needed for Tensorboard projector
-    metadata_filename = "mnist_metadata.tsv"
+    metadata_filename = "embed_metadata.tsv"
     with open(os.path.join(eval_dir, metadata_filename), 'w') as f:
         for i in range(emb_size):
             c = labels[i]
@@ -105,6 +108,7 @@ if __name__ == '__main__':
     projector.visualize_embeddings(summary_writer, config)
 
     saver = tf.train.Saver()
-    with tf.Session() as sess2:
-        sess2.run(embedding_var.initializer)
-        saver.save(sess2, os.path.join(eval_dir, "embeddings.ckpt"))
+    with tf.Session() as sess:
+        sess.run(tf.global_variables_initializer())
+        sess.run(embedding_var.initializer)
+        saver.save(sess, os.path.join(eval_dir, "embeddings.ckpt"))
