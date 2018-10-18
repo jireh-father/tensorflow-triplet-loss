@@ -66,6 +66,8 @@ if __name__ == '__main__':
     tf.logging.info("Embeddings shape: {}".format(embeddings.shape))
 
     # Visualize test embeddings
+    sess = tf.Session()
+    sess.graph._unsafe_unfinalize()
     embedding_var = tf.Variable(embeddings, name='mnist_embedding')
 
     eval_dir = os.path.join(args.model_dir, "eval")
@@ -81,14 +83,14 @@ if __name__ == '__main__':
     embedding.sprite.image_path = pathlib.Path(args.sprite_filename).name
     embedding.sprite.single_image_dim.extend([28, 28])
 
-    with tf.Session() as sess:
-        # TODO (@omoindrot): remove the hard-coded 10000
-        # Obtain the test labels
-        dataset = mnist_dataset.test(args.data_dir)
-        dataset = dataset.map(lambda img, lab: lab)
-        dataset = dataset.batch(emb_size)
-        labels_tensor = dataset.make_one_shot_iterator().get_next()
-        labels = sess.run(labels_tensor)
+    # with tf.Session() as sess:
+    # TODO (@omoindrot): remove the hard-coded 10000
+    # Obtain the test labels
+    dataset = mnist_dataset.test(args.data_dir)
+    dataset = dataset.map(lambda img, lab: lab)
+    dataset = dataset.batch(emb_size)
+    labels_tensor = dataset.make_one_shot_iterator().get_next()
+    labels = sess.run(labels_tensor)
 
     # Specify where you find the metadata
     # Save the metadata file needed for Tensorboard projector
@@ -103,6 +105,6 @@ if __name__ == '__main__':
     projector.visualize_embeddings(summary_writer, config)
 
     saver = tf.train.Saver()
-    with tf.Session() as sess:
-        sess.run(embedding_var.initializer)
-        saver.save(sess, os.path.join(eval_dir, "embeddings.ckpt"))
+    with tf.Session() as sess2:
+        sess2.run(embedding_var.initializer)
+        saver.save(sess2, os.path.join(eval_dir, "embeddings.ckpt"))
