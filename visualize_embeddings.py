@@ -56,9 +56,11 @@ if __name__ == '__main__':
     # TODO (@omoindrot): remove the hard-coded 10000
     emb_size = params.eval_size
     if emb_size > max_emb_size:
-        emb_size = max_emb_size - 1
+        emb_size = max_emb_size
     embeddings = np.zeros((emb_size, params.embedding_size))
     for i, p in enumerate(predictions):
+        if i >= emb_size:
+            break
         embeddings[i] = p['embeddings']
 
     tf.logging.info("Embeddings shape: {}".format(embeddings.shape))
