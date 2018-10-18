@@ -11,9 +11,9 @@ from tensorflow.contrib.tensorboard.plugins import projector
 
 import model.mnist_dataset as mnist_dataset
 from model.utils import Params
-from model.input_fn import test_input_fn
 from model.model_fn import model_fn
-
+from model import input_fn
+from model import tfrecord_input_fn
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--model_dir', default='experiments/base_model',
@@ -22,7 +22,8 @@ parser.add_argument('--data_dir', default='data/mnist',
                     help="Directory containing the dataset")
 parser.add_argument('--sprite_filename', default='experiments/mnist_10k_sprite.png',
                     help="Sprite image for the projector")
-
+parser.add_argument('--dataset_name', default='mnist',
+                    help="Directory containing the dataset")
 
 if __name__ == '__main__':
     tf.reset_default_graph()
@@ -41,8 +42,11 @@ if __name__ == '__main__':
                                     save_summary_steps=params.save_summary_steps)
     estimator = tf.estimator.Estimator(model_fn, params=params, config=config)
 
-
     # EMBEDDINGS VISUALIZATION
+    if args.dataset_name == "tfrecord":
+        test_input_fn = tfrecord_input_fn.test_input_fn
+    else:
+        test_input_fn = input_fn.test_input_fn
 
     # Compute embeddings on the test set
     tf.logging.info("Predicting")
