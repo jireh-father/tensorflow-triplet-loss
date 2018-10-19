@@ -19,10 +19,6 @@ parser.add_argument('--model_dir', default='experiments/alexnet',
                     help="Experiment directory containing params.json")
 parser.add_argument('--data_dir', default='D:\data\deep_fashion\In-shop Clothes Retrieval Benchmark\\tfrecord',
                     help="Directory containing the dataset")
-parser.add_argument('--query_cnt', default='14213',
-                    help="Directory containing the dataset")
-parser.add_argument('--index_cnt', default='12608',
-                    help="Directory containing the dataset")
 
 if __name__ == '__main__':
     tf.reset_default_graph()
@@ -58,6 +54,8 @@ if __name__ == '__main__':
     sess = tf.Session()
     all_index_labels, all_query_labels = sess.run([index_labels, query_labels])
     sess.close()
+    print(all_index_labels.shape, all_query_labels.shape)
+    sys.exit()
 
     query_embeddings = np.zeros((params.query_cnt, params.embedding_size))
     total = 0
@@ -93,7 +91,7 @@ if __name__ == '__main__':
     print("end search!")
     true_cnt = 0
     false_cnt = 0
-    for i in range(params.query_images):
+    for i in range(params.query_cnt):
         searched_indices = index_labels[search_idx[i]]
         print(searched_indices)
         if query_labels[i] in searched_indices:

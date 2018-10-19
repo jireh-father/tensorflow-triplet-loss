@@ -16,6 +16,6 @@
   "eval_size": 10000,
   "num_parallel_calls": 4,
   "save_summary_steps": 50,
-  "index_images": 12612,
-  "query_images": 14218
+  "index_cnt": 12612,
+  "query_cnt": 14218
 }
