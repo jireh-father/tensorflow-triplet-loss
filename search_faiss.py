@@ -48,4 +48,4 @@ if __name__ == '__main__':
         else:
             false_cnt += 1
     print("true", true_cnt, "false", false_cnt)
-    print("top %d accuracy", true_cnt / len(query_labels))
+    print("top %d accuracy" % k, float(true_cnt) / float(len(query_labels)))
