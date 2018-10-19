@@ -55,4 +55,4 @@ if __name__ == '__main__':
     for accuracy in accuracy_list:
         accuracy[2] = float(accuracy[0]) / float(len(query_labels))
     print(accuracy_list)
-    print("top %d accuracy" % k, float(accuracy_list[k - 1][0]) / float(len(query_labels)))
+    print("top %d accuracy" % args.top_k, float(accuracy_list[args.top_k - 1][0]) / float(len(query_labels)))
