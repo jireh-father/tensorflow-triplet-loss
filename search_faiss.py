@@ -11,14 +11,15 @@ parser.add_argument('--embedding_size', default=512,
                     help="Directory containing the dataset")
 
 if __name__ == '__main__':
-    import faiss
 
     args = parser.parse_args()
 
-    query_embeddings = np.load(os.path.join(args.model_dir, "query_embeddings.npy"))
-    index_embeddings = np.load(os.path.join(args.model_dir, "index_embeddings.npy"))
+    query_embeddings = np.load(os.path.join(args.model_dir, "query_embeddings.npy")).astype(np.float32)
+    index_embeddings = np.load(os.path.join(args.model_dir, "index_embeddings.npy")).astype(np.float32)
     query_labels = np.load(os.path.join(args.model_dir, "query_labels.npy"))
     index_labels = np.load(os.path.join(args.model_dir, "index_labels.npy"))
+
+    import faiss
 
     ngpus = faiss.get_num_gpus()
 

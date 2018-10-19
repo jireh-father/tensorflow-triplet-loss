@@ -54,8 +54,8 @@ if __name__ == '__main__':
     sess = tf.Session()
     all_index_labels, all_query_labels = sess.run([index_labels, query_labels])
     sess.close()
-    print("index_labels", all_index_labels)
-    print("query_labels", all_query_labels)
+    print("index_labels", all_index_labels.shape)
+    print("query_labels", all_query_labels.shape)
 
     query_embeddings = np.zeros((params.query_cnt, params.embedding_size))
     total = 0
@@ -75,5 +75,3 @@ if __name__ == '__main__':
     np.save(os.path.join(args.model_dir, "index_embeddings.npy"), index_embeddings)
     np.save(os.path.join(args.model_dir, "query_labels.npy"), all_query_labels)
     np.save(os.path.join(args.model_dir, "index_labels.npy"), all_index_labels)
-
-
