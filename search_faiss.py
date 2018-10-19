@@ -47,9 +47,9 @@ if __name__ == '__main__':
         for j in range(1, 101):
             tmp_indeces = searched_indices[:j]
             if q_label in tmp_indeces:
-                accuracy_list[j][0] += 1
+                accuracy_list[j - 1][0] += 1
             else:
-                accuracy_list[j][1] += 1
+                accuracy_list[j - 1][1] += 1
     for accuracy in accuracy_list:
         accuracy[2] = float(accuracy[0]) / float(len(query_labels))
     print(accuracy)
