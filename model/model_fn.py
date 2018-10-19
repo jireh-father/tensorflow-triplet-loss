@@ -42,7 +42,7 @@ def build_model(is_training, images, params):
     return out
 
 
-def build_alexnet(is_training, images, params):
+def build_slim_model(is_training, images, params):
     """Compute outputs of the model (embeddings for triplet loss).
 
     Args:
@@ -55,7 +55,8 @@ def build_alexnet(is_training, images, params):
         output: (tf.Tensor) output of the model
     """
     weight_decay = 0.
-    model_f = nets_factory.get_network_fn("alexnet_v2", params.embedding_size, weight_decay, is_training=is_training)
+    model_f = nets_factory.get_network_fn(params.model_name, params.embedding_size, weight_decay,
+                                          is_training=is_training)
     out, _ = model_f(images)
 
     return out
@@ -84,10 +85,10 @@ def model_fn(features, labels, mode, params):
     # MODEL: define the layers of the model
     with tf.variable_scope('model'):
         # Compute the embeddings with the model
-        if params.model_name == "alexnet_v2":
-            embeddings = build_alexnet(is_training, images, params)
-        else:
+        if params.model_name == "base_model":
             embeddings = build_model(is_training, images, params)
+        else:
+            embeddings = build_slim_model(is_training, images, params)
     embedding_mean_norm = tf.reduce_mean(tf.norm(embeddings, axis=1))
     tf.summary.scalar("embedding_mean_norm", embedding_mean_norm)
 
