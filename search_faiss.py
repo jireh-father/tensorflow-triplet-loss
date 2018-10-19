@@ -35,7 +35,7 @@ if __name__ == '__main__':
     gpu_index.add(index_embeddings)  # add vectors to the index
     print(gpu_index.ntotal)
 
-    k = int(args.top_k)  # we want to see 4 nearest neighbors
+    k = 100  # we want to see 4 nearest neighbors
     print("start search!")
     search_d, search_idx = gpu_index.search(query_embeddings, k)
     print("end search!")
