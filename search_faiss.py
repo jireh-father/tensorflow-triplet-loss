@@ -40,6 +40,7 @@ if __name__ == '__main__':
     search_d, search_idx = gpu_index.search(query_embeddings, k)
     print("end search!")
     accuracy_list = []
+    accuracies = []
     for i in range(100):
         accuracy_list.append([0, 0, 0])
     for i, q_label in enumerate(query_labels):
@@ -54,5 +55,10 @@ if __name__ == '__main__':
                 accuracy_list[j - 1][1] += 1
     for accuracy in accuracy_list:
         accuracy[2] = float(accuracy[0]) / float(len(query_labels))
+        accuracies.append(accuracy[2])
     print(accuracy_list)
     print("top %d accuracy" % args.top_k, float(accuracy_list[args.top_k - 1][0]) / float(len(query_labels)))
+    import matplotlib.pyplot as plt
+
+    plt.plot(accuracies)
+    plt.savefig(os.path.join(args.model_dir, "accuracy_graph.png"))
