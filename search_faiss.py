@@ -9,6 +9,8 @@ parser.add_argument('--data_dir', default='D:\data\deep_fashion\In-shop Clothes 
                     help="Directory containing the dataset")
 parser.add_argument('--embedding_size', default=512,
                     help="Directory containing the dataset")
+parser.add_argument('--top_k', default=20,
+                    help="Directory containing the dataset")
 
 if __name__ == '__main__':
 
@@ -33,7 +35,7 @@ if __name__ == '__main__':
     gpu_index.add(index_embeddings)  # add vectors to the index
     print(gpu_index.ntotal)
 
-    k = 20  # we want to see 4 nearest neighbors
+    k = int(args.top_k)  # we want to see 4 nearest neighbors
     print("start search!")
     search_d, search_idx = gpu_index.search(query_embeddings, k)
     print("end search!")
