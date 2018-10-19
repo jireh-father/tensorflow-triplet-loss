@@ -54,6 +54,8 @@ if __name__ == '__main__':
     sess = tf.Session()
     all_index_labels, all_query_labels = sess.run([index_labels, query_labels])
     sess.close()
+    print("index_labels", all_index_labels)
+    print("query_labels", all_query_labels)
 
     query_embeddings = np.zeros((params.query_cnt, params.embedding_size))
     total = 0
