@@ -39,13 +39,19 @@ if __name__ == '__main__':
     print("start search!")
     search_d, search_idx = gpu_index.search(query_embeddings, k)
     print("end search!")
-    true_cnt = 0
-    false_cnt = 0
+    accuracy_list = [[0, 0, 0]] * 100
     for i, q_label in enumerate(query_labels):
         searched_indices = index_labels[search_idx[i]]
-        if q_label in searched_indices:
-            true_cnt += 1
-        else:
-            false_cnt += 1
-    print("true", true_cnt, "false", false_cnt)
-    print("top %d accuracy" % k, float(true_cnt) / float(len(query_labels)))
+        searched_distances = search_d[searched_indices]
+
+        for j in range(1, 101):
+            tmp_indeces = searched_indices[:j]
+            if q_label in tmp_indeces:
+                accuracy_list[j][0] += 1
+            else:
+                accuracy_list[j][1] += 1
+    for accuracy in accuracy_list:
+        accuracy[2] = float(accuracy[0]) / float(len(query_labels))
+    print(accuracy)
+    # print("true", true_cnt, "false", false_cnt)
+    # print("top %d accuracy" % k, float(true_cnt) / float(len(query_labels)))
