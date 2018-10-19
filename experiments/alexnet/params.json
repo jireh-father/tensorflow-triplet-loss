@@ -15,5 +15,7 @@
   "train_size": 25882,
   "eval_size": 26830,
   "num_parallel_calls": 4,
-  "save_summary_steps": 50
+  "save_summary_steps": 50,
+  "query_cnt": 14213,
+  "index_cnt": 12608
 }

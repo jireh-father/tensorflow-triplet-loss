@@ -65,6 +65,18 @@ def test_pre_process(example_proto):
     return image, label
 
 
+def only_label(example_proto):
+    features = {
+        "image/class/label": tf.FixedLenFeature((), tf.int64, default_value=0),
+    }
+
+    parsed_features = tf.parse_single_example(example_proto, features)
+
+    label = parsed_features["image/class/label"]
+
+    return label
+
+
 def dataset(tfrecord_files, preprocess_fn):
     dataset = tf.data.TFRecordDataset(tfrecord_files)
     return dataset.map(preprocess_fn)
@@ -80,3 +92,27 @@ def test(directory):
     files = glob.glob(os.path.join(directory, "*_test_*tfrecord"))
     assert len(files) > 0
     return dataset(files, test_pre_process)
+
+
+def query(directory):
+    files = glob.glob(os.path.join(directory, "*_query_*tfrecord"))
+    assert len(files) > 0
+    return dataset(files, test_pre_process)
+
+
+def index(directory):
+    files = glob.glob(os.path.join(directory, "*_index_*tfrecord"))
+    assert len(files) > 0
+    return dataset(files, test_pre_process)
+
+
+def query_label(directory):
+    files = glob.glob(os.path.join(directory, "*_query_*tfrecord"))
+    assert len(files) > 0
+    return dataset(files, only_label)
+
+
+def index_label(directory):
+    files = glob.glob(os.path.join(directory, "*_index_*tfrecord"))
+    assert len(files) > 0
+    return dataset(files, only_label)
