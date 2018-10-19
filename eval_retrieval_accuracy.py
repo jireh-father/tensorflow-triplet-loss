@@ -71,31 +71,9 @@ if __name__ == '__main__':
     print("index total", total)
     print(query_embeddings.shape, index_embeddings.shape)
 
-    import faiss
+    np.save(os.path.join(args.model_dir, "query_embeddings.npy"), query_embeddings)
+    np.save(os.path.join(args.model_dir, "index_embeddings.npy"), index_embeddings)
+    np.save(os.path.join(args.model_dir, "query_labels.npy"), all_query_labels)
+    np.save(os.path.join(args.model_dir, "index_labels.npy"), all_index_labels)
 
-    ngpus = faiss.get_num_gpus()
 
-    print("number of GPUs:", ngpus)
-    cpu_index = faiss.IndexFlatL2(params.embedding_size)
-
-    gpu_index = faiss.index_cpu_to_all_gpus(  # build the index
-        cpu_index
-    )
-
-    gpu_index.add(index_embeddings)  # add vectors to the index
-    print(gpu_index.ntotal)
-
-    k = 20  # we want to see 4 nearest neighbors
-    print("start search!")
-    search_d, search_idx = gpu_index.search(query_embeddings, k)
-    print("end search!")
-    true_cnt = 0
-    false_cnt = 0
-    for i in range(params.query_cnt):
-        searched_indices = index_labels[search_idx[i]]
-        print(searched_indices)
-        if query_labels[i] in searched_indices:
-            true_cnt += 1
-        else:
-            false_cnt += 1
-    print("true", true_cnt, "false", false_cnt)
