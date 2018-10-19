@@ -41,7 +41,6 @@ if __name__ == '__main__':
     false_cnt = 0
     for i, q_label in enumerate(query_labels):
         searched_indices = index_labels[search_idx[i]]
-        print(searched_indices)
         if q_label in searched_indices:
             true_cnt += 1
         else:
