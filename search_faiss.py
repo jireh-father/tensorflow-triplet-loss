@@ -57,7 +57,7 @@ if __name__ == '__main__':
         accuracy[2] = float(accuracy[0]) / float(len(query_labels))
         accuracies.append(accuracy[2])
     print(accuracy_list)
-    print("top %d accuracy" % args.top_k, float(accuracy_list[args.top_k - 1][0]) / float(len(query_labels)))
+    print("top %s accuracy" % args.top_k, float(accuracy_list[args.top_k - 1][0]) / float(len(query_labels)))
     import matplotlib.pyplot as plt
 
     plt.plot(accuracies)
