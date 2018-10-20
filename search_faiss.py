@@ -61,8 +61,8 @@ if __name__ == '__main__':
     for accuracy in accuracy_list:
         accuracy[2] = float(accuracy[0]) / float(len(query_labels))
         accuracies.append(accuracy[2])
-
-    json.dump(true_indices, open(os.path.join(args.model_dir, "true_indices.json"), "w+"))
+    np.save(os.path.join(args.model_dir, "true_indices.json"), true_indices)
+    # json.dump(true_indices, open(os.path.join(args.model_dir, "true_indices.json"), "w+"))
     json.dump(accuracy_list, open(os.path.join(args.model_dir, "accuracy_list.json"), "w+"))
     print(accuracy_list)
     print("top %s accuracy" % args.top_k, float(accuracy_list[int(args.top_k) - 1][0]) / float(len(query_labels)))
