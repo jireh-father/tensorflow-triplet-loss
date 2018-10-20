@@ -54,7 +54,7 @@ if __name__ == '__main__':
             if q_label in tmp_indices:
                 accuracy_list[j - 1][0] += 1
                 if not is_true:
-                    true_indices.append([i, j])
+                    true_indices.append([i, j, search_idx[i]])
                     is_true = True
             else:
                 accuracy_list[j - 1][1] += 1
