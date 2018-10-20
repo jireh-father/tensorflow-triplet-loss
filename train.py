@@ -23,6 +23,8 @@ parser.add_argument('--data_dir', default='./data/mnist',
 #                     help="Directory containing the dataset")
 parser.add_argument('--dataset_name', default='mnist',
                     help="Directory containing the dataset")
+parser.add_argument('--save_checkpoints_steps', default=10000,
+                    help="Directory containing the dataset")
 
 if __name__ == '__main__':
     tf.reset_default_graph()
@@ -41,6 +43,7 @@ if __name__ == '__main__':
     config = tf.estimator.RunConfig(tf_random_seed=230,
                                     model_dir=args.model_dir,
                                     save_summary_steps=params.save_summary_steps,
+                                    save_checkpoints_steps=int(args.save_checkpoints_steps),
                                     session_config=tf_config)
 
     estimator = tf.estimator.Estimator(model_fn, params=params, config=config)
