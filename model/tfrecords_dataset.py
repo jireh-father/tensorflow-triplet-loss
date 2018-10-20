@@ -84,35 +84,41 @@ def dataset(tfrecord_files, preprocess_fn):
 
 def train(directory):
     files = glob.glob(os.path.join(directory, "*_train_*tfrecord"))
+    files.sort()
     assert len(files) > 0
     return dataset(files, train_pre_process)
 
 
 def test(directory):
     files = glob.glob(os.path.join(directory, "*_test_*tfrecord"))
+    files.sort()
     assert len(files) > 0
     return dataset(files, test_pre_process)
 
 
 def query(directory):
     files = glob.glob(os.path.join(directory, "*_query_*tfrecord"))
+    files.sort()
     assert len(files) > 0
     return dataset(files, test_pre_process)
 
 
 def index(directory):
     files = glob.glob(os.path.join(directory, "*_index_*tfrecord"))
+    files.sort()
     assert len(files) > 0
     return dataset(files, test_pre_process)
 
 
 def query_label(directory):
     files = glob.glob(os.path.join(directory, "*_query_*tfrecord"))
+    files.sort()
     assert len(files) > 0
     return dataset(files, only_label)
 
 
 def index_label(directory):
     files = glob.glob(os.path.join(directory, "*_index_*tfrecord"))
+    files.sort()
     assert len(files) > 0
     return dataset(files, only_label)
