@@ -54,15 +54,15 @@ if __name__ == '__main__':
             if q_label in tmp_indices:
                 accuracy_list[j - 1][0] += 1
                 if not is_true:
-                    true_indices.append([i, j, search_idx[i]])
+                    true_indices.append([i, j, list(search_idx[i])])
                     is_true = True
             else:
                 accuracy_list[j - 1][1] += 1
     for accuracy in accuracy_list:
         accuracy[2] = float(accuracy[0]) / float(len(query_labels))
         accuracies.append(accuracy[2])
-    np.save(os.path.join(args.model_dir, "true_indices.npy"), true_indices)
-    # json.dump(true_indices, open(os.path.join(args.model_dir, "true_indices.json"), "w+"))
+    # np.save(os.path.join(args.model_dir, "true_indices.npy"), true_indices)
+    json.dump(true_indices, open(os.path.join(args.model_dir, "true_indices.json"), "w+"))
     json.dump(accuracy_list, open(os.path.join(args.model_dir, "accuracy_list.json"), "w+"))
     print(accuracy_list)
     print("top %s accuracy" % args.top_k, float(accuracy_list[int(args.top_k) - 1][0]) / float(len(query_labels)))
