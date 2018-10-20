@@ -1,6 +1,7 @@
 import os
 import numpy as np
 import argparse
+import json
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--model_dir', default='experiments/alexnet',
@@ -43,19 +44,26 @@ if __name__ == '__main__':
     accuracies = []
     for i in range(100):
         accuracy_list.append([0, 0, 0])
+    true_indices = []
     for i, q_label in enumerate(query_labels):
         searched_indices = index_labels[search_idx[i]]
         searched_distances = search_d[searched_indices]
-
+        is_true = False
         for j in range(1, 101):
             tmp_indices = searched_indices[:j]
             if q_label in tmp_indices:
                 accuracy_list[j - 1][0] += 1
+                if not is_true:
+                    true_indices.append([i, j])
+                    is_true = True
             else:
                 accuracy_list[j - 1][1] += 1
     for accuracy in accuracy_list:
         accuracy[2] = float(accuracy[0]) / float(len(query_labels))
         accuracies.append(accuracy[2])
+
+    json.dump(true_indices, open(os.path.join(args.model_dir, "true_indices.json"), "w+"))
+    json.dump(accuracy_list, open(os.path.join(args.model_dir, "accuracy_list.json"), "w+"))
     print(accuracy_list)
     print("top %s accuracy" % args.top_k, float(accuracy_list[int(args.top_k) - 1][0]) / float(len(query_labels)))
     import matplotlib.pyplot as plt
