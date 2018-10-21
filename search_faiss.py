@@ -32,7 +32,7 @@ if __name__ == '__main__':
     gpu_index = faiss.index_cpu_to_all_gpus(  # build the index
         cpu_index
     )
-
+    false_limit = 100
     gpu_index.add(index_embeddings)  # add vectors to the index
     print(gpu_index.ntotal)
 
@@ -45,6 +45,8 @@ if __name__ == '__main__':
     for i in range(100):
         accuracy_list.append([0, 0, 0])
     true_indices = []
+    false_indices = []
+
     for i, q_label in enumerate(query_labels):
         searched_indices = index_labels[search_idx[i]]
         searched_distances = search_d[searched_indices]
@@ -58,11 +60,15 @@ if __name__ == '__main__':
                     is_true = True
             else:
                 accuracy_list[j - 1][1] += 1
+        if not is_true:
+            false_indices.append([i, list(search_idx[i])])
     for accuracy in accuracy_list:
         accuracy[2] = float(accuracy[0]) / float(len(query_labels))
         accuracies.append(accuracy[2])
     # np.save(os.path.join(args.model_dir, "true_indices.npy"), true_indices)
     json.dump(true_indices, open(os.path.join(args.model_dir, "true_indices.json"), "w+"))
+
+    json.dump(false_indices, open(os.path.join(args.model_dir, "false_indices.json"), "w+"))
     json.dump(accuracy_list, open(os.path.join(args.model_dir, "accuracy_list.json"), "w+"))
     print(accuracy_list)
     print("top %s accuracy" % args.top_k, float(accuracy_list[int(args.top_k) - 1][0]) / float(len(query_labels)))
