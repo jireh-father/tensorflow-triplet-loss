@@ -50,18 +50,19 @@ if __name__ == '__main__':
     for i, q_label in enumerate(query_labels):
         searched_indices = index_labels[search_idx[i]]
         searched_distances = search_d[searched_indices]
+        tmp_dist = [str(d) for d in search_d[i]]
         is_true = False
         for j in range(1, 101):
             tmp_indices = searched_indices[:j]
             if q_label in tmp_indices:
                 accuracy_list[j - 1][0] += 1
                 if not is_true:
-                    true_indices.append([i, j, list(search_idx[i]), list(search_d[i])])
+                    true_indices.append([i, j, list(search_idx[i]), tmp_dist])
                     is_true = True
             else:
                 accuracy_list[j - 1][1] += 1
         if not is_true:
-            false_indices.append([i, list(search_idx[i]), list(search_d[i])])
+            false_indices.append([i, list(search_idx[i]), tmp_dist])
     for accuracy in accuracy_list:
         accuracy[2] = float(accuracy[0]) / float(len(query_labels))
         accuracies.append(accuracy[2])
