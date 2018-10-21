@@ -56,12 +56,12 @@ if __name__ == '__main__':
             if q_label in tmp_indices:
                 accuracy_list[j - 1][0] += 1
                 if not is_true:
-                    true_indices.append([i, j, list(search_idx[i])])
+                    true_indices.append([i, j, list(search_idx[i]), list(search_d[i])])
                     is_true = True
             else:
                 accuracy_list[j - 1][1] += 1
         if not is_true:
-            false_indices.append([i, list(search_idx[i])])
+            false_indices.append([i, list(search_idx[i]), list(search_d[i])])
     for accuracy in accuracy_list:
         accuracy[2] = float(accuracy[0]) / float(len(query_labels))
         accuracies.append(accuracy[2])
