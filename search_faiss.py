@@ -71,7 +71,7 @@ if __name__ == '__main__':
 
     json.dump(false_indices, open(os.path.join(args.model_dir, "false_indices.json"), "w+"))
     json.dump(accuracy_list, open(os.path.join(args.model_dir, "accuracy_list.json"), "w+"))
-    json.dump(accuracy, open(os.path.join(args.model_dir, "accuracy.json"), "w+"))
+    json.dump(accuracies, open(os.path.join(args.model_dir, "accuracies.json"), "w+"))
     print(accuracy_list)
     print("top %s accuracy" % args.top_k, float(accuracy_list[int(args.top_k) - 1][0]) / float(len(query_labels)))
     # import matplotlib.pyplot as plt
