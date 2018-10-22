@@ -122,3 +122,17 @@ def index_label(directory):
     files.sort()
     assert len(files) > 0
     return dataset(files, only_label)
+
+
+def train_label(directory):
+    files = glob.glob(os.path.join(directory, "*_test_*tfrecord"))
+    files.sort()
+    assert len(files) > 0
+    return dataset(files, only_label)
+
+
+def test_label(directory):
+    files = glob.glob(os.path.join(directory, "*_test_*tfrecord"))
+    files.sort()
+    assert len(files) > 0
+    return dataset(files, only_label)

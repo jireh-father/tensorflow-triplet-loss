@@ -18,6 +18,18 @@ def train_input_fn(data_dir, params):
     return dataset
 
 
+def train_input_fn_once(data_dir, params):
+    """Train input function for the MNIST dataset.
+
+    Args:
+        data_dir: (string) path to the data directory
+        params: (Params) contains hyperparameters of the model (ex: `params.num_epochs`)
+    """
+    dataset = td.train(data_dir)
+    dataset = dataset.batch(params.batch_size)
+    return dataset
+
+
 def test_input_fn(data_dir, params):
     """Test input function for the MNIST dataset.
 
@@ -53,6 +65,32 @@ def index_input_fn(data_dir, params):
     """
     dataset = td.index(data_dir)
     dataset = dataset.batch(params.batch_size)
+    # dataset = dataset.prefetch(params.batch_size)  # make sure you always have one batch ready to serve
+    return dataset
+
+
+def train_label_fn(data_dir, params):
+    """Test input function for the MNIST dataset.
+
+    Args:
+        data_dir: (string) path to the data directory
+        params: (Params) contains hyperparameters of the model (ex: `params.num_epochs`)
+    """
+    dataset = td.train_label(data_dir)
+    dataset = dataset.batch(params.index_cnt)
+    # dataset = dataset.prefetch(params.batch_size)  # make sure you always have one batch ready to serve
+    return dataset
+
+
+def test_label_fn(data_dir, params):
+    """Test input function for the MNIST dataset.
+
+    Args:
+        data_dir: (string) path to the data directory
+        params: (Params) contains hyperparameters of the model (ex: `params.num_epochs`)
+    """
+    dataset = td.test_label(data_dir)
+    dataset = dataset.batch(params.index_cnt)
     # dataset = dataset.prefetch(params.batch_size)  # make sure you always have one batch ready to serve
     return dataset
 
