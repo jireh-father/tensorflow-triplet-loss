@@ -52,7 +52,7 @@ if __name__ == '__main__':
     sess.close()
     print("train_labels", all_train_labels.shape)
 
-    train_embeddings = np.zeros((params.query_cnt, params.embedding_size))
+    train_embeddings = np.zeros((params.train_size, params.embedding_size))
     total = 0
     for i, p in enumerate(train_predictions):
         total += 1
