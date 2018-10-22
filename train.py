@@ -59,7 +59,7 @@ if __name__ == '__main__':
     estimator.train(lambda: train_input_fn(args.data_dir, params))
 
     # Evaluate the model on the test set
-    tf.logging.info("Evaluation on test set.")
-    res = estimator.evaluate(lambda: test_input_fn(args.data_dir, params))
-    for key in res:
-        print("{}: {}".format(key, res[key]))
+    # tf.logging.info("Evaluation on test set.")
+    # res = estimator.evaluate(lambda: test_input_fn(args.data_dir, params))
+    # for key in res:
+    #     print("{}: {}".format(key, res[key]))

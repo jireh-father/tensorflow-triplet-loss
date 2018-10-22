@@ -27,62 +27,38 @@ for n in df2:
     total += permutation(n, 2)
 print(total)
 
+
+def copy_files(df_tmp, image_dir, output_parent_dir):
+    total = len(df_tmp)
+    i = 0
+    for index, row in df_tmp.iterrows():
+        print(i, total)
+        i += 1
+        item_id = row["item_id"]
+        image_name = row["image_name"]
+        output_dir = os.path.join(output_parent_dir, item_id)
+        if not os.path.isdir(output_dir):
+            os.makedirs(output_dir)
+        file_path = os.path.join(image_dir, image_name)
+        shutil.copy(file_path, os.path.join(output_dir, os.path.basename(image_name)))
+
+
 df_tmp = df[df.evaluation_status == "train"]
-total = len(df_tmp)
 image_dir = "D:/data/deep_fashion/In-shop Clothes Retrieval Benchmark/Img"
 output_parent_dir = image_dir + "_train"
-for index, row in df_tmp.iterrows():
-
-    print(index, total)
-    item_id = row["item_id"]
-    image_name = row["image_name"]
-    output_dir = os.path.join(output_parent_dir, item_id)
-    if not os.path.isdir(output_dir):
-        os.makedirs(output_dir)
-    file_path = os.path.join(image_dir, image_name)
-    shutil.copy(file_path, os.path.join(output_dir, os.path.basename(image_name)))
+copy_files(df_tmp, image_dir, output_parent_dir)
 
 df_tmp = df[(df.evaluation_status == "gallery") | (df.evaluation_status == "query")]
-total = len(df_tmp)
 image_dir = "D:/data/deep_fashion/In-shop Clothes Retrieval Benchmark/Img"
 output_parent_dir = image_dir + "_test"
-for index, row in df_tmp.iterrows():
-
-    print(index, total)
-    item_id = row["item_id"]
-    image_name = row["image_name"]
-    output_dir = os.path.join(output_parent_dir, item_id)
-    if not os.path.isdir(output_dir):
-        os.makedirs(output_dir)
-    file_path = os.path.join(image_dir, image_name)
-    shutil.copy(file_path, os.path.join(output_dir, os.path.basename(image_name)))
+copy_files(df_tmp, image_dir, output_parent_dir)
 
 df_tmp = df[df.evaluation_status == "gallery"]
-total = len(df_tmp)
 image_dir = "D:/data/deep_fashion/In-shop Clothes Retrieval Benchmark/Img"
 output_parent_dir = image_dir + "_index"
-for index, row in df_tmp.iterrows():
-
-    print(index, total)
-    item_id = row["item_id"]
-    image_name = row["image_name"]
-    output_dir = os.path.join(output_parent_dir, item_id)
-    if not os.path.isdir(output_dir):
-        os.makedirs(output_dir)
-    file_path = os.path.join(image_dir, image_name)
-    shutil.copy(file_path, os.path.join(output_dir, os.path.basename(image_name)))
+copy_files(df_tmp, image_dir, output_parent_dir)
 
 df_tmp = df[(df.evaluation_status == "query")]
-total = len(df_tmp)
 image_dir = "D:/data/deep_fashion/In-shop Clothes Retrieval Benchmark/Img"
 output_parent_dir = image_dir + "_query"
-for index, row in df_tmp.iterrows():
-
-    print(index, total)
-    item_id = row["item_id"]
-    image_name = row["image_name"]
-    output_dir = os.path.join(output_parent_dir, item_id)
-    if not os.path.isdir(output_dir):
-        os.makedirs(output_dir)
-    file_path = os.path.join(image_dir, image_name)
-    shutil.copy(file_path, os.path.join(output_dir, os.path.basename(image_name)))
+copy_files(df_tmp, image_dir, output_parent_dir)
