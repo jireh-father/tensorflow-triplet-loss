@@ -68,9 +68,10 @@ if __name__ == '__main__':
     json.dump(true_indices, open(os.path.join(args.model_dir, "train_true_indices.json"), "w+"))
     json.dump(false_indices, open(os.path.join(args.model_dir, "train_false_indices.json"), "w+"))
     json.dump(accuracy_list, open(os.path.join(args.model_dir, "train_accuracy_list.json"), "w+"))
+    json.dump(accuracy, open(os.path.join(args.model_dir, "train_accuracy.json"), "w+"))
     print(accuracy_list)
     print("top %s accuracy" % args.top_k, float(accuracy_list[int(args.top_k) - 1][0]) / float(len(query_labels)))
-    import matplotlib.pyplot as plt
-
-    plt.plot(accuracies)
-    plt.savefig(os.path.join(args.model_dir, "accuracy_graph.png"))
+    # import matplotlib.pyplot as plt
+    #
+    # plt.plot(accuracies)
+    # plt.savefig(os.path.join(args.model_dir, "accuracy_graph.png"))
