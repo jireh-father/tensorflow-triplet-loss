@@ -77,7 +77,7 @@ def train_label_fn(data_dir, params):
         params: (Params) contains hyperparameters of the model (ex: `params.num_epochs`)
     """
     dataset = td.train_label(data_dir)
-    dataset = dataset.batch(params.index_cnt)
+    dataset = dataset.batch(params.train_size)
     # dataset = dataset.prefetch(params.batch_size)  # make sure you always have one batch ready to serve
     return dataset
 
@@ -90,7 +90,7 @@ def test_label_fn(data_dir, params):
         params: (Params) contains hyperparameters of the model (ex: `params.num_epochs`)
     """
     dataset = td.test_label(data_dir)
-    dataset = dataset.batch(params.index_cnt)
+    dataset = dataset.batch(params.eval_size)
     # dataset = dataset.prefetch(params.batch_size)  # make sure you always have one batch ready to serve
     return dataset
 
