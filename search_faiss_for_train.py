@@ -40,7 +40,7 @@ if __name__ == '__main__':
     print("end search!")
     accuracy_list = []
     accuracies = []
-    for i in range(100):
+    for i in range(99):
         accuracy_list.append([0, 0, 0])
     true_indices = []
     false_indices = []
