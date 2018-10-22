@@ -39,7 +39,7 @@ if __name__ == '__main__':
 
     # Compute embeddings on the train set
     tf.logging.info("Predicting")
-    train_predictions = estimator.predict(lambda: tfrecord_input_fn.train_input_fn(args.data_dir, params))
+    train_predictions = estimator.predict(lambda: tfrecord_input_fn.train_input_fn_once(args.data_dir, params))
 
     train_label_ds = tfrecord_input_fn.train_label_fn(args.data_dir, params)
     train_iterator = train_label_ds.make_one_shot_iterator()
