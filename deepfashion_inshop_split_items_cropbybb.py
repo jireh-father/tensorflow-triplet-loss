@@ -2,11 +2,6 @@ import pandas as pd
 import math, os, shutil
 from PIL import Image
 
-
-def permutation(n, r):
-    return int(math.factorial(n) / math.factorial(n - r))
-
-
 df = pd.read_csv("D:\data\deep_fashion\In-shop Clothes Retrieval Benchmark\Eval\\list_eval_partition_pd.txt",
                  delim_whitespace=True)
 df_bb = pd.read_csv("D:\data\deep_fashion\In-shop Clothes Retrieval Benchmark\Anno/list_bbox_inshop_pd.txt",
@@ -14,6 +9,7 @@ df_bb = pd.read_csv("D:\data\deep_fashion\In-shop Clothes Retrieval Benchmark\An
 df = df.set_index('image_name')
 df_bb = df_bb.set_index('image_name')
 df = pd.concat([df, df_bb], axis=1, join='inner')
+df["width"] = df["x_2"] - df["x_1"]
 
 
 def copy_files(df_tmp, image_dir, output_parent_dir, is_high_res=False):
@@ -23,6 +19,7 @@ def copy_files(df_tmp, image_dir, output_parent_dir, is_high_res=False):
     for index, row in df_tmp.iterrows():
         print(i, total)
         i += 1
+        limit_width_percent = 0.3
         item_id = row["item_id"]
         image_name = index
         output_dir = os.path.join(output_parent_dir, item_id)
@@ -35,7 +32,22 @@ def copy_files(df_tmp, image_dir, output_parent_dir, is_high_res=False):
 
         img = Image.open(file_path)
         copy_path = os.path.join(output_dir, os.path.basename(image_name))
-        img = img.crop((int(row["x_1"]), int(row["y_1"]), int(row["x_2"]), int(row["y_2"])))
+
+        pose_type = row["pose_type"]
+        w = img.size[0]
+        width_percent = row["width"] / w
+        x_1 = int(row["x_1"])
+        x_2 = int(row["x_2"])
+        y_1 = int(row["y_1"])
+        y_2 = int(row["y_2"])
+        if pose_type == 2 and width_percent < limit_width_percent:
+            if width_percent < 0.07:
+                ww = row["width"] * 2
+            else:
+                ww = row["width"] * ((limit_width_percent + 0.1) - width_percent) * 2
+            x_1 = int(row["x_1"]) - ww
+            x_2 = int(row["x_2"]) + ww
+        img = img.crop((x_1, y_1, x_2, y_2))
         old_size = img.size  # old_size[0] is in (width, height) format
         desired_size = image_size
         ratio = float(desired_size) / max(old_size)
@@ -51,17 +63,17 @@ def copy_files(df_tmp, image_dir, output_parent_dir, is_high_res=False):
 
 image_dir = "D:/data/deep_fashion/In-shop Clothes Retrieval Benchmark/Img"
 df_tmp = df[df.evaluation_status == "train"]
-output_parent_dir = image_dir + "_train_crop"
+output_parent_dir = image_dir + "_train_crop_expand"
 copy_files(df_tmp, image_dir, output_parent_dir)
 
 df_tmp = df[(df.evaluation_status == "gallery") | (df.evaluation_status == "query")]
-output_parent_dir = image_dir + "_test_crop"
+output_parent_dir = image_dir + "_test_crop_expand"
 copy_files(df_tmp, image_dir, output_parent_dir)
 
 df_tmp = df[df.evaluation_status == "gallery"]
-output_parent_dir = image_dir + "_index_crop"
+output_parent_dir = image_dir + "_index_crop_expand"
 copy_files(df_tmp, image_dir, output_parent_dir)
 
 df_tmp = df[(df.evaluation_status == "query")]
-output_parent_dir = image_dir + "_query_crop"
+output_parent_dir = image_dir + "_query_crop_expand"
 copy_files(df_tmp, image_dir, output_parent_dir)

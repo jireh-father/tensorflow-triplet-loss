@@ -39,6 +39,7 @@ if __name__ == '__main__':
 
     # Compute embeddings on the test set
     tf.logging.info("Predicting")
+
     index_predictions = estimator.predict(lambda: tfrecord_input_fn.index_input_fn(args.data_dir, params))
     query_predictions = estimator.predict(lambda: tfrecord_input_fn.query_input_fn(args.data_dir, params))
 

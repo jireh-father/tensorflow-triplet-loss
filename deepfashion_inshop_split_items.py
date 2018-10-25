@@ -43,22 +43,19 @@ def copy_files(df_tmp, image_dir, output_parent_dir):
         shutil.copy(file_path, os.path.join(output_dir, os.path.basename(image_name)))
 
 
-df_tmp = df[df.evaluation_status == "train"]
 image_dir = "D:/data/deep_fashion/In-shop Clothes Retrieval Benchmark/Img"
+df_tmp = df[df.evaluation_status == "train"]
 output_parent_dir = image_dir + "_train"
 copy_files(df_tmp, image_dir, output_parent_dir)
 
 df_tmp = df[(df.evaluation_status == "gallery") | (df.evaluation_status == "query")]
-image_dir = "D:/data/deep_fashion/In-shop Clothes Retrieval Benchmark/Img"
 output_parent_dir = image_dir + "_test"
 copy_files(df_tmp, image_dir, output_parent_dir)
 
 df_tmp = df[df.evaluation_status == "gallery"]
-image_dir = "D:/data/deep_fashion/In-shop Clothes Retrieval Benchmark/Img"
 output_parent_dir = image_dir + "_index"
 copy_files(df_tmp, image_dir, output_parent_dir)
 
 df_tmp = df[(df.evaluation_status == "query")]
-image_dir = "D:/data/deep_fashion/In-shop Clothes Retrieval Benchmark/Img"
 output_parent_dir = image_dir + "_query"
 copy_files(df_tmp, image_dir, output_parent_dir)

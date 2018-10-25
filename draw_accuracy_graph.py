@@ -1,6 +1,6 @@
 import json, os
 
-accuracy_list = json.load(open(os.path.join("D:\\result\\triplet", "train_accuracies.json")))
+accuracy_list = json.load(open(os.path.join("D:\\result\\triplet", "accuracies.json")))
 import matplotlib.pyplot as plt
 
 print(accuracy_list)

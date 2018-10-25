@@ -17,5 +17,6 @@
   "num_parallel_calls": 4,
   "save_summary_steps": 50,
   "query_cnt": 14213,
-  "index_cnt": 12608
+  "index_cnt": 12608,
+  "shuffle_rand_seed": 1
 }
