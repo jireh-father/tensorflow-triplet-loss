@@ -1,4 +1,5 @@
 import tensorflow as tf
+import glob
 
 F = tf.app.flags.FLAGS
 
@@ -37,3 +38,18 @@ def count_records(tfrecord_filenames):
         for _ in tf.python_io.tf_record_iterator(fn):
             c += 1
     return c
+
+
+def count_records_each_class(tfrecords_filenames):
+    labels = {}
+    for tfrecords_filename in tfrecords_filenames:
+        record_iterator = tf.python_io.tf_record_iterator(path=tfrecords_filename)
+
+        for string_record in record_iterator:
+            example = tf.train.Example()
+            example.ParseFromString(string_record)
+            label = int(example.features.feature['image/class/label'].int64_list.value[0])
+            if not label in labels:
+                labels[label] = 0
+            labels[label] += 1
+    return labels

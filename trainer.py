@@ -7,14 +7,14 @@ from tensorflow.python.client import device_lib
 def main(config):
     print("CUDA Visible device", device_lib.list_local_devices())
 
-    assert config.sampling_method is not None
-    assert os.path.isfile(os.path.join("./samplings", config.sampling_method + ".py"))
-    sampling_f = util.get_attr('samplings.%s' % config.sampling_method, "samplings")
+    assert config.sampling_name is not None
+    assert os.path.isfile(os.path.join("./samplings", config.sampling_name + ".py"))
+    sampling_f = util.get_attr('samplings.%s' % config.sampling_name, "samplings")
     data_list = sampling_f()
 
-    assert config.sampling_method is not None
-    assert os.path.isfile(os.path.join("./models", config.sampling_method + ".py"))
-    sampling_f = util.get_attr('models.%s' % config.sampling_method, "build_model")
+    assert config.model_name is not None
+    assert os.path.isfile(os.path.join("./models", config.model_name + ".py"))
+    sampling_f = util.get_attr('models.%s' % config.model_name, "build_model")
     data_list = sampling_f()
 
 
@@ -24,10 +24,13 @@ def train():
 
 if __name__ == '__main__':
     fl = tf.app.flags
-    fl.DEFINE_string('train_data_path_patterns', './dataset/*.tfrecord|./dataset2/*.tfrecord', '')
-    fl.DEFINE_string('sampling_method', 'pk', '')
-
+    fl.DEFINE_string('train_consumer_path_patterns', './dataset/*.tfrecord|./dataset2/*.tfrecord', '')
+    fl.DEFINE_string('train_shop_path_patterns', './dataset/*.tfrecord|./dataset2/*.tfrecord', '')
     fl.DEFINE_boolean('parallel_exec', True, '')
+    fl.DEFINE_string('sampling_name', 'pk', 'pk, random...')
+    fl.DEFINE_string('model_name', 'alexnet_v2', '')
+    fl.DEFINE_integer('nums_sampling_classes', 4, 'ony in case of pk sampling.')
+
     fl.DEFINE_string('save_dir', 'experiments/base_model', '')
     fl.DEFINE_string('data_dirs', './data/mnist|./data/', '')
     fl.DEFINE_string('data_files', None, '')
