@@ -38,8 +38,6 @@ F = fl.FLAGS
 
 
 def runner():
-    os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-    os.environ["CUDA_VISIBLE_DEVICES"] = F.gpu_no
     p = Process(target=trainer.main, args=(F,))
     p.daemon = True
     p.start()

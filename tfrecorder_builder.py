@@ -14,17 +14,17 @@ def _get_dataset_filename(dataset_name, output_dir, phase_name, shard_id, num_sh
     return os.path.join(output_dir, output_filename)
 
 
-def _dataset_exists():
-    for shard_id in range(F.num_shards):
+def _dataset_exists(dataset_name, output_dir, phase_name, num_shards):
+    for shard_id in range(num_shards):
         output_filename = _get_dataset_filename(
-            F.dataset_name, F.output_dir, F.phase_name, shard_id, F.num_shards)
+            dataset_name, output_dir, phase_name, shard_id, num_shards)
         if not tf.gfile.Exists(output_filename):
             return False
     return True
 
 
-def _get_filenames_and_classes():
-    root = F.image_dir
+def _get_filenames_and_classes(image_dir):
+    root = image_dir
     directories = []
     class_names = []
     for filename in os.listdir(root):
@@ -135,11 +135,11 @@ def make_tfrecords(dataset_name, phase_name, image_dir, output_dir, num_shards, 
     if not tf.gfile.Exists(image_dir):
         tf.gfile.MakeDirs(image_dir)
 
-    if _dataset_exists():
+    if _dataset_exists(dataset_name, output_dir, phase_name, num_shards):
         print('Dataset files already exist. Exiting without re-creating them.')
         return False
 
-    photo_filenames, class_names = _get_filenames_and_classes()
+    photo_filenames, class_names = _get_filenames_and_classes(image_dir)
 
     class_names_to_ids = dict(zip(class_names, range(len(class_names))))
 
@@ -150,7 +150,7 @@ def make_tfrecords(dataset_name, phase_name, image_dir, output_dir, num_shards, 
 
     # Finally, write the labels file:
     labels_to_class_names = dict(zip(range(len(class_names)), class_names))
-    dataset_utils.write_label_file(labels_to_class_names, image_dir)
+    dataset_utils.write_label_file(labels_to_class_names, image_dir, dataset_name)
 
     if remove_images:
         _clean_up_temporary_files(image_dir)
@@ -160,6 +160,8 @@ def make_tfrecords(dataset_name, phase_name, image_dir, output_dir, num_shards, 
 if __name__ == '__main__':
     fl = tf.app.flags
     fl.DEFINE_string('config_file', "dataset_config.json", "")
+    fl.DEFINE_boolean('parallel_exec', False, '')
+
     fl.DEFINE_string('dataset_name', "deepfashion", "")
     fl.DEFINE_string('phase_name', "train", "")
     fl.DEFINE_string('image_dir', 'd:/data/deepfashion/image_dir', '')
@@ -167,7 +169,7 @@ if __name__ == '__main__':
     fl.DEFINE_integer('num_channels', 3, '')
     fl.DEFINE_integer('num_shards', 4, '')
     fl.DEFINE_boolean('remove_images', False, '')
-    fl.DEFINE_boolean('parallel_exec', False, '')
+
     F = tf.app.flags.FLAGS
 
     if os.path.isfile(F.config_file):

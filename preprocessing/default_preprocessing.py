@@ -1,9 +1,11 @@
 import tensorflow as tf
+import util
 
 
-def train_pre_process(example_proto):
+def train_preprocessing(example_proto):
     features = {"image/encoded": tf.FixedLenFeature((), tf.string, default_value=""),
                 "image/class/label": tf.FixedLenFeature((), tf.int64, default_value=0),
+                "image/class/name": tf.FixedLenFeature((), tf.string, default_value=""),
                 'image/height': tf.FixedLenFeature((), tf.int64, default_value=0),
                 'image/width': tf.FixedLenFeature((), tf.int64, default_value=0)
                 }
@@ -21,12 +23,12 @@ def train_pre_process(example_proto):
     image = tf.subtract(image, 0.5)
     image = tf.multiply(image, 2.0)
 
+    label_name = parsed_features["image/class/name"]
+
     label = parsed_features["image/class/label"]
 
-    return image, label
+    return image, label, label_name
 
 
-def build_dataset(file_names):
-    dataset = tf.data.TFRecordDataset(file_names)
-    dataset.map(train_pre_process)
+def eval_preprocessing():
     pass

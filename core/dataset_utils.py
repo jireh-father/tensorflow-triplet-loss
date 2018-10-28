@@ -79,7 +79,7 @@ def image_to_tfexample(image_data, image_format, height, width, class_id, class_
 
 
 def write_label_file(labels_to_class_names, dataset_dir,
-                     filename=LABELS_FILENAME):
+                     filename):
     """Writes a file with the list of class names.
 
     Args:
@@ -87,7 +87,7 @@ def write_label_file(labels_to_class_names, dataset_dir,
       dataset_dir: The directory in which the labels file should be written.
       filename: The filename where the class names are written.
     """
-    labels_filename = os.path.join(dataset_dir, filename)
+    labels_filename = os.path.join(dataset_dir, filename + "_" + LABELS_FILENAME)
     with tf.gfile.Open(labels_filename, 'w') as f:
         for label in labels_to_class_names:
             class_name = labels_to_class_names[label]
