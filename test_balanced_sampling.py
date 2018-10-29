@@ -58,10 +58,11 @@ def _make_balanced_batched_dataset(datasets, num_classes, num_classes_per_batch,
     #                 yield label
 
     # selector = tf.data.Dataset.from_generator(generator, tf.int64)
+    seed_ph = tf.placeholder(tf.int64, [], "seed")
 
     def generator(_):
         # Sample `num_classes_per_batch` classes for the batch
-        sampled = tf.random_shuffle(tf.range(num_classes))[:num_classes_per_batch]
+        sampled = tf.random_shuffle(tf.range(num_classes), 1)[:num_classes_per_batch]
         # Repeat each element `num_images_per_class` times
         batch_labels = tf.tile(tf.expand_dims(sampled, -1), [1, num_images_per_class])
         return tf.to_int64(tf.reshape(batch_labels, [-1]))
@@ -70,13 +71,14 @@ def _make_balanced_batched_dataset(datasets, num_classes, num_classes_per_batch,
     selector = selector.apply(tf.contrib.data.unbatch())
 
     dataset = tf.contrib.data.choose_from_datasets(datasets, selector)
+
     # dataset = DirectedInterleaveDataset(selector, datasets)
 
     # Batch
     batch_size = num_classes_per_batch * num_images_per_class
     dataset = dataset.batch(batch_size)
 
-    return dataset
+    return dataset, seed_ph
 
 
 def balanced_train_input_fn(dataset):
@@ -87,17 +89,17 @@ def balanced_train_input_fn(dataset):
     """
 
     # pylint: disable=cell-var-from-loop
-    datasets = [dataset.filter(lambda img, lab: tf.equal(lab, i)) for i in range(10)]
+    datasets = [dataset.filter(lambda img, lab: tf.equal(lab, i)) for i in range(3)]
 
-    dataset = _make_balanced_batched_dataset(datasets,
-                                             10,
-                                             4,
-                                             6)
+    dataset, seed_ph = _make_balanced_batched_dataset(datasets,
+                                                      3,
+                                                      3,
+                                                      3)
 
     # TODO: check that `buffer_size=None` works
     dataset = dataset.prefetch(None)
 
-    return dataset
+    return dataset, seed_ph
 
 
 import glob, os
@@ -112,56 +114,100 @@ def train_pre_process(example_proto):
     parsed_features = tf.parse_single_example(example_proto, features)
 
     image = tf.image.decode_jpeg(parsed_features["image/encoded"], 3)
-    # image = tf.cast(image, tf.float32)
-    #
-    # image = tf.expand_dims(image, 0)
-    # image = tf.image.resize_bilinear(image, [224, 224], align_corners=False)
-    # image = tf.squeeze(image, [0])
-    #
-    # image = tf.divide(image, 255.0)
-    # image = tf.subtract(image, 0.5)
-    # image = tf.multiply(image, 2.0)
+    image = tf.cast(image, tf.float32)
+
+    image = tf.expand_dims(image, 0)
+    image = tf.image.resize_bilinear(image, [224, 224], align_corners=False)
+    image = tf.squeeze(image, [0])
+
+    image = tf.divide(image, 255.0)
+    image = tf.subtract(image, 0.5)
+    image = tf.multiply(image, 2.0)
 
     label = parsed_features["image/class/label"]
     # return parsed_features["image/encoded"], label
     return image, label
 
 
-data_dir = "c:\source/tensorflow-image-classification-framework/mnist"
+data_dir = "E:\data\\adience_kaggle\\test"
 files = glob.glob(os.path.join(data_dir, "*_train_*tfrecord"))
+print(files)
 dataset = tf.data.TFRecordDataset(files)
 dataset = dataset.map(train_pre_process)
-print(33)
-dataset = balanced_train_input_fn(dataset)
-print(44)
-index_iterator = dataset.make_one_shot_iterator()
-print(55)
-img, index_labels = index_iterator.get_next()
-print(66)
+
+# data_dir = "c:\source/tensorflow-image-classification-framework/mnist"
+# files = glob.glob(os.path.join(data_dir, "*_validation_*tfrecord"))
+files = glob.glob(os.path.join(data_dir, "*_train_*tfrecord"))
+print(files)
+dataset2 = tf.data.TFRecordDataset(files)
+dataset2 = dataset2.map(train_pre_process)
+# dataset = tf.data.Dataset.zip((dataset, dataset2))
+
+dataset, seed_ph = balanced_train_input_fn(dataset)
+dataset2, seed_ph2 = balanced_train_input_fn(dataset2)
+# dataset = tf.data.Dataset.zip((dataset, dataset2))
+# iterator = dataset.make_one_shot_iterator()
+# iterator = dataset.make_initializable_iterator()
+iterator = tf.data.Iterator.from_structure(dataset.output_types,
+                                           dataset.output_shapes)
+img, index_labels = iterator.get_next()
+training_init_op = iterator.make_initializer(dataset)
+# iterator2 = dataset2.make_one_shot_iterator()
+# img2, index_labels2 = iterator2.get_next()
+
 tf_config = tf.ConfigProto()
 tf_config.gpu_options.allow_growth = True
-print(99)
 sess = tf.Session(config=tf_config)
-print(77)
 from PIL import Image
 
+sess.run(training_init_op)
+# sess.run(iterator.initializer)
 print(1)
-for i in range(2):
+for i in range(1):
     j = 0
     while True:
         try:
-            print(2)
-            images, lll = sess.run([img, index_labels])
-            print(3)
-            im = Image.fromarray(images[0].astype('uint8'))
+            # print(2)
+            # images, lll, lll2 = sess.run([img, index_labels, index_labels2])
+            # print(3)
+            # im = Image.fromarray(images[0].astype('uint8'))
 
+            # print(lll, lll2)
+            # sys.exit()
+
+            # images, lll = sess.run([img, index_labels],feed_dict={seed_ph:1, seed_ph2:1})
+            images, lll = sess.run([img, index_labels])
+            # print(images[1])
             print(lll)
             images, lll = sess.run([img, index_labels])
-            im = Image.fromarray(images[0].astype('uint8'))
+            # print(images[1])
             print(lll)
+            sys.exit()
             images, lll = sess.run([img, index_labels])
-            im = Image.fromarray(images[0].astype('uint8'))
-            print(lll)
+            print(images[1])
+            print(lll[1])
+
+            images, lll = sess.run([img, index_labels])
+            print(images[1])
+            print(lll[1])
+
+            images, lll = sess.run([img, index_labels])
+            print(images[1])
+            print(lll[1])
+            # images, lll = sess.run([img, index_labels], feed_dict={seed_ph: 2, seed_ph2: 2})
+            # images, lll = sess.run([img, index_labels])
+            # print(images[1])
+            # print(lll[1])
+            # print(len(lll))
+            # print(len(images))
+            # print(images[0].shape)
+            # print(images[1].shape)
+            # print(lll[0].shape)
+            # print(lll[1].shape)
+            # print(lll)
+            # images, lll = sess.run([img, index_labels])
+            # im = Image.fromarray(images[0].astype('uint8'))
+            # print(lll)
             # im.show()
             # if j == 0:
             # im.save("%d.jpg" % i)
@@ -170,5 +216,6 @@ for i in range(2):
             # if i == 1:
             #     break
         except tf.errors.OutOfRangeError:
+            print("EXPCE")
             break
 sys.exit()
