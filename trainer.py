@@ -127,6 +127,13 @@ if __name__ == '__main__':
                     'The minimal end learning rate used by a polynomial decay learning rate.')
     fl.DEFINE_float('label_smoothing', 0.0, 'The amount of label smoothing.')
     fl.DEFINE_float('learning_rate_decay_factor', 0.94, 'Learning rate decay factor.')
+    tf.app.flags.DEFINE_float(
+        'num_epochs_per_decay', 2.0,
+        'Number of epochs after which learning rate decays.')
+    tf.app.flags.DEFINE_float(
+        'moving_average_decay', 0.9999,
+        'The decay to use for the moving average.'
+        'If left as None, then moving averages are not used.')
 
     fl.DEFINE_string('save_dir', 'experiments/base_model', '')
     fl.DEFINE_string('data_dirs', './data/mnist|./data/', '')
