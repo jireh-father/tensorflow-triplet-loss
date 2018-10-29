@@ -32,20 +32,20 @@ def train_pre_process(example_proto):
                 }
     parsed_features = tf.parse_single_example(example_proto, features)
 
-    # image = tf.image.decode_jpeg(parsed_features["image/encoded"], 3)
-    # image = tf.cast(image, tf.float32)
-    #
-    # image = tf.expand_dims(image, 0)
-    # image = tf.image.resize_bilinear(image, [224, 224], align_corners=False)
-    # image = tf.squeeze(image, [0])
-    #
-    # image = tf.divide(image, 255.0)
-    # image = tf.subtract(image, 0.5)
-    # image = tf.multiply(image, 2.0)
+    image = tf.image.decode_jpeg(parsed_features["image/encoded"], 3)
+    image = tf.cast(image, tf.float32)
+
+    image = tf.expand_dims(image, 0)
+    image = tf.image.resize_bilinear(image, [224, 224], align_corners=False)
+    image = tf.squeeze(image, [0])
+
+    image = tf.divide(image, 255.0)
+    image = tf.subtract(image, 0.5)
+    image = tf.multiply(image, 2.0)
 
     label = parsed_features["image/class/label"]
-    return parsed_features["image/encoded"], label
-    # return image, label
+    # return parsed_features["image/encoded"], label
+    return image, label
 
 
 def aa(image, label):
@@ -70,10 +70,10 @@ files = glob.glob(os.path.join(data_dir, "*_train_*tfrecord"))
 aaa = 4
 dataset = tf.data.TFRecordDataset(files)
 dataset = dataset.map(train_pre_process)
-dataset = dataset.filter(
-    lambda im, lb: tf.reduce_any(tf.equal(sampling_p, lb))
-)
-dataset = dataset.map(aa)
+# dataset = dataset.filter(
+#     lambda im, lb: tf.reduce_any(tf.equal(sampling_p, lb))
+# )
+# dataset = dataset.map(aa)
 dataset = dataset.shuffle(100)  # whole dataset into the buffer
 dataset = dataset.repeat(3)
 dataset = dataset.batch(512)
@@ -86,16 +86,17 @@ img, index_labels = index_iterator.get_next()
 
 tf_config = tf.ConfigProto()
 tf_config.gpu_options.allow_growth = True
-sess = tf.Session()
+print(11)
+sess = tf.Session(config=tf_config)
+print(22)
 import time
 
 start = time.time()
 # sess.run(index_iterator.initializer, feed_dict={sampling_p: np.array([1, 2, 3, 4], np.int64)})
 print(time.time() - start)
-ii, ll = sess.run([img, index_labels], feed_dict={sampling_p: np.array([1, 2, 3, 4], np.int64)})
-ii, ll = sess.run([img, index_labels], feed_dict={sampling_p: np.array([1, 2, 3, 4], np.int64)})
-ii, ll = sess.run([img, index_labels], feed_dict={sampling_p: np.array([1, 2, 3, 4], np.int64)})
-
+ii, ll = sess.run([img, index_labels])
+print(ii, ll)
+sys.exit()
 # from PIL import Image
 #
 # im = Image.fromarray(ii[0].astype('uint8'))
