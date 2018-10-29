@@ -34,7 +34,9 @@ def _get_filenames_and_classes(image_dir):
             class_names.append(filename)
 
     photo_filenames = []
-    exts = ["jpg", "JPEG", "JPG", "jpeg"]
+    # todo: handle both uppercase and lowercase
+    # exts = ["jpg", "JPEG", "JPG", "jpeg"]
+    exts = ["jpg", "jpeg"]
     for directory in directories:
         for ext in exts:
             for path in glob.glob(os.path.join(directory, "*.%s" % ext)):

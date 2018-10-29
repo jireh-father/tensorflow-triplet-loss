@@ -1,7 +1,6 @@
 import tensorflow as tf
 
 F = tf.app.flags.FLAGS
-label_map = {}
 
 
 def set_flags(conf):
@@ -67,3 +66,17 @@ def create_label_map(tfrecords_filenames):
             if label not in labels:
                 labels[label] = len(labels)
     return labels
+
+
+def count_label_cnt(tfrecords_filenames):
+    labels = {}
+    for tfrecords_filename in tfrecords_filenames:
+        record_iterator = tf.python_io.tf_record_iterator(path=tfrecords_filename)
+
+        for string_record in record_iterator:
+            example = tf.train.Example()
+            example.ParseFromString(string_record)
+            label = example.features.feature['image/class/name'].bytes_list.value[0].decode('utf-8')
+            if label not in labels:
+                labels[label] = True
+    return len(labels)

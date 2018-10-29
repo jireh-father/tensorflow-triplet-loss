@@ -1,13 +1,13 @@
 """Define the model."""
 
 import tensorflow as tf
+from core import optimizer
+from core.triplet_loss import batch_all_triplet_loss
+from core.triplet_loss import batch_hard_triplet_loss
+from core import nets_factory
 
-from model.triplet_loss import batch_all_triplet_loss
-from model.triplet_loss import batch_hard_triplet_loss
-from model import nets_factory
 
-
-def build_model(is_training, images, params):
+def build_custom_model(is_training, images, params):
     """Compute outputs of the model (embeddings for triplet loss).
 
     Args:
@@ -54,47 +54,30 @@ def build_slim_model(is_training, images, params):
     Returns:
         output: (tf.Tensor) output of the model
     """
-    weight_decay = 0.
-    model_f = nets_factory.get_network_fn(params.model_name, params.embedding_size, weight_decay,
+    model_f = nets_factory.get_network_fn(params.model_name.split(".")[1], params.embedding_size, params.weight_decay,
                                           is_training=is_training)
     out, _ = model_f(images)
 
     return out
 
 
-def build_model(features, labels, mode, params):
-    """Model function for tf.estimator
-
-    Args:
-        features: input batch of images
-        labels: labels of the images
-        mode: can be one of tf.estimator.ModeKeys.{TRAIN, EVAL, PREDICT}
-        params: contains hyperparameters of the model (ex: `params.learning_rate`)
-
-    Returns:
-        model_spec: tf.estimator.EstimatorSpec object
-    """
+def build_model(images, labels, mode, params):
     is_training = (mode == tf.estimator.ModeKeys.TRAIN)
-
-    images = features
-    if len(images.get_shape()) == 2:
-        images = tf.reshape(images, [-1, params.image_size, params.image_size, 1])
-        assert images.shape[1:] == [params.image_size, params.image_size, 1], "{}".format(images.shape)
 
     # -----------------------------------------------------------
     # MODEL: define the layers of the model
     with tf.variable_scope('model'):
         # Compute the embeddings with the model
-        if params.model_name == "base_model":
-            embeddings = build_model(is_training, images, params)
-        else:
+        if params.model_name.startswith("slim."):
             embeddings = build_slim_model(is_training, images, params)
+        else:
+            embeddings = build_custom_model(is_training, images, params)
+
     embedding_mean_norm = tf.reduce_mean(tf.norm(embeddings, axis=1))
     tf.summary.scalar("embedding_mean_norm", embedding_mean_norm)
 
     if mode == tf.estimator.ModeKeys.PREDICT:
-        predictions = {'embeddings': embeddings}
-        return tf.estimator.EstimatorSpec(mode=mode, predictions=predictions)
+        return embeddings
 
     labels = tf.cast(labels, tf.int64)
 
@@ -118,9 +101,6 @@ def build_model(features, labels, mode, params):
         if params.triplet_strategy == "batch_all":
             eval_metric_ops['fraction_positive_triplets'] = tf.metrics.mean(fraction)
 
-    if mode == tf.estimator.ModeKeys.EVAL:
-        return tf.estimator.EstimatorSpec(mode, loss=loss, eval_metric_ops=eval_metric_ops)
-
     # Summaries for training
     tf.summary.scalar('loss', loss)
     if params.triplet_strategy == "batch_all":
@@ -129,13 +109,11 @@ def build_model(features, labels, mode, params):
     tf.summary.image('train_image', images, max_outputs=1)
 
     # Define training step that minimizes the loss with the Adam optimizer
-    optimizer = tf.train.AdamOptimizer(params.learning_rate)
     global_step = tf.train.get_global_step()
-    if params.use_batch_norm:
-        # Add a dependency to update the moving mean and variance for batch normalization
-        with tf.control_dependencies(tf.get_collection(tf.GraphKeys.UPDATE_OPS)):
-            train_op = optimizer.minimize(loss, global_step=global_step)
-    else:
-        train_op = optimizer.minimize(loss, global_step=global_step)
+    learning_rate = optimizer.configure_learning_rate(global_step, config)
+    opt = optimizer.configure_optimizer(learning_rate, config)
+    optimizer = tf.train.AdamOptimizer(params.learning_rate)
 
-    return tf.estimator.EstimatorSpec(mode, loss=loss, train_op=train_op)
+    train_op = optimizer.minimize(loss, global_step=global_step)
+
+    return train_op, embeddings, loss
