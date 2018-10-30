@@ -129,7 +129,7 @@ def train_pre_process(example_proto):
     return image, label
 
 
-data_dir = "E:\data\\adience_kaggle\\test"
+data_dir = "D:\\data\\fashion_image_retrieval\\deep_fashion\\In-shop Clothes Retrieval Benchmark\\tfrecord"
 files = glob.glob(os.path.join(data_dir, "*_train_*tfrecord"))
 print(files)
 dataset = tf.data.TFRecordDataset(files)
@@ -158,7 +158,6 @@ training_init_op = iterator.make_initializer(dataset)
 tf_config = tf.ConfigProto()
 tf_config.gpu_options.allow_growth = True
 sess = tf.Session(config=tf_config)
-from PIL import Image
 
 sess.run(training_init_op)
 # sess.run(iterator.initializer)

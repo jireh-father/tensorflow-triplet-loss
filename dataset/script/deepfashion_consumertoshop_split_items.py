@@ -6,8 +6,51 @@ def permutation(n, r):
     return int(math.factorial(n) / math.factorial(n - r))
 
 
-df = pd.read_csv("D:\data\deep_fashion\consumer-to-shop\Eval\\list_eval_partition_pd.txt",
+df = pd.read_csv("D:/data/fashion/image_retrieval/deep_fashion/consumer-to-shop/Eval/list_eval_partition_pd.txt",
                  delim_whitespace=True)
+total_cnt = df.item_id.nunique()
+train_cnt = df[df.evaluation_status == "train"].item_id.nunique()
+test_cnt = df[df.evaluation_status == "test"].item_id.nunique()
+val_cnt = df[df.evaluation_status == "val"].item_id.nunique()
+print(total_cnt)
+print(train_cnt)
+print(val_cnt)
+print(test_cnt)
+
+consumer_cnt = df.image_pair_name_1.nunique()
+shop_cnt = df.image_pair_name_2.nunique()
+print(consumer_cnt)
+print(shop_cnt)
+
+train_consumer_cnt = df[df.evaluation_status == "train"].image_pair_name_1.nunique()
+train_shop_cnt = df[df.evaluation_status == "train"].image_pair_name_2.nunique()
+train_total_cnt = train_consumer_cnt + train_shop_cnt
+print(train_consumer_cnt)
+print(train_shop_cnt)
+print(train_total_cnt)
+
+val_consumer_cnt = df[df.evaluation_status == "val"].image_pair_name_1.nunique()
+val_shop_cnt = df[df.evaluation_status == "val"].image_pair_name_2.nunique()
+val_total_cnt = val_consumer_cnt + val_shop_cnt
+print(val_consumer_cnt)
+print(val_shop_cnt)
+print(val_total_cnt)
+
+test_consumer_cnt = df[df.evaluation_status == "test"].image_pair_name_1.nunique()
+test_shop_cnt = df[df.evaluation_status == "test"].image_pair_name_2.nunique()
+test_total_cnt = test_consumer_cnt + test_shop_cnt
+print(test_consumer_cnt)
+print(test_shop_cnt)
+print(test_total_cnt)
+
+# avg img count each item : 6.47
+a = df[df.evaluation_status == "train"].groupby(['item_id']).agg(['count']).mean()
+# max img count : 162
+b = df[df.evaluation_status == "train"].groupby(['item_id']).agg(['count']).max()
+c = df[df.evaluation_status == "train"].groupby(['item_id']).agg(['count']).min()
+print(a, b, c)
+
+sys.exit()
 
 
 def copy_files_for_train(df_tmp, image_dir, output_parent_dir):

@@ -6,15 +6,23 @@ def permutation(n, r):
     return int(math.factorial(n) / math.factorial(n - r))
 
 
-df = pd.read_csv("D:\data\deep_fashion\In-shop Clothes Retrieval Benchmark\Eval\\list_eval_partition_pd.txt",
-                 delim_whitespace=True)
+df = pd.read_csv(
+    "D:/data/fashion/image_retrieval/deep_fashion/In-shop Clothes Retrieval Benchmark/Eval/list_eval_partition_pd.txt",
+    delim_whitespace=True)
 train_cnt = df[df.evaluation_status == "train"].item_id.nunique()
 test_cnt = df[df.evaluation_status == "query"].item_id.nunique()
+print(train_cnt)
+print(test_cnt)
+
 
 # avg img count each item : 6.47
-df[df.evaluation_status == "train"].groupby(['item_id']).agg(['count']).mean()
+a = df[df.evaluation_status == "train"].groupby(['item_id']).agg(['count']).mean()
 # max img count : 162
-df[df.evaluation_status == "train"].groupby(['item_id']).agg(['count']).max()
+b =df[df.evaluation_status == "train"].groupby(['item_id']).agg(['count']).max()
+c =df[df.evaluation_status == "train"].groupby(['item_id']).agg(['count']).min()
+print(a, b,c)
+
+sys.exit()
 # item_id group by count
 df2 = df[df.evaluation_status == "train"].groupby(['item_id'])["item_id"].count()
 total = 0
