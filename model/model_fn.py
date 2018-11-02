@@ -90,6 +90,7 @@ def model_fn(features, labels, mode, params):
         else:
             embeddings = build_slim_model(is_training, images, params)
     embedding_mean_norm = tf.reduce_mean(tf.norm(embeddings, axis=1))
+
     tf.summary.scalar("embedding_mean_norm", embedding_mean_norm)
 
     if mode == tf.estimator.ModeKeys.PREDICT:

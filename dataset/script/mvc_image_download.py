@@ -7,38 +7,15 @@ import glob
 import numpy as np
 import argparse
 import requests
-import imghdr
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--output_dir', default='D:/data/fashion/image_retrieval/street2shop/images',
+parser.add_argument('--output_dir', default='/home/data/mvc/images',
                     help="Experiment directory containing params.json")
-parser.add_argument('--data_file', default='D:/data/fashion/image_retrieval/street2shop/photos/1_photos.npy',
+parser.add_argument('--data_file', default='/home/data/mvc/url/0_image_links.npy',
                     help="Directory containing the dataset")
 
-
-def download(url, file_path):
-    try:
-        r = requests.get(url, timeout=10)
-
-        if r.status_code == 200:
-
-            image_type = imghdr.what(None, r.content)
-
-            if image_type is not None:
-                with open(file_path, 'wb') as f:
-                    f.write(r.content)
-                    f.close()
-            else:
-                raise Exception
-        else:
-            raise Exception
-    except:
-        return False
-    return True
-
-
 args = parser.parse_args()
-
+key = "image_url_4x"
 if not os.path.isdir(args.output_dir):
     os.makedirs(args.output_dir)
 assert os.path.isdir(args.output_dir)
@@ -59,11 +36,10 @@ image_error = []
 convert_error = []
 success = 0
 lines = np.load(args.data_file)
-for line_raw in lines:
-    line = line_raw.rstrip('\n').split(",")
-    o = urlparse(line[1])
-    file_name = str(int(line[0]))
-    url = line[1]
+for line in lines:
+    o = urlparse(line[key])
+    file_name = os.path.splitext(os.path.basename(line[key]))[0]
+    url = line[key]
     ext = os.path.splitext(o.path)[1][1:].lower()
     if ext == "jpeg":
         ext = "jpg"
@@ -80,18 +56,13 @@ for line_raw in lines:
         if os.path.isfile(tmp_file_path) and is_image(tmp_file_path):
             continue
 
-    # try:
-    result = download(url, output_file_path)
-    # opener = urllib.request.build_opener()
-    # opener.addheaders = [('User-agent',
-    #                       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.113 Safari/537.36')]
-    # urllib.request.install_opener(opener)
-    # urllib.request.urlretrieve(url, output_file_path)
-    # except:
-    if not result:
-        import traceback
-
-        traceback.print_exc()
+    try:
+        opener = urllib.request.build_opener()
+        opener.addheaders = [('User-agent',
+                              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.113 Safari/537.36')]
+        urllib.request.install_opener(opener)
+        urllib.request.urlretrieve(url, output_file_path)
+    except:
         download_error.append(line)
         print("failed to download the url %s" % url)
         continue
@@ -115,7 +86,6 @@ for line_raw in lines:
             convert_error.append(line)
             print("failed to convert to jpg image %s", output_file_path)
             continue
-
     success += 1
 
 import uuid

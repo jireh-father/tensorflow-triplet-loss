@@ -14,13 +14,12 @@ test_cnt = df[df.evaluation_status == "query"].item_id.nunique()
 print(train_cnt)
 print(test_cnt)
 
-
 # avg img count each item : 6.47
 a = df[df.evaluation_status == "train"].groupby(['item_id']).agg(['count']).mean()
 # max img count : 162
-b =df[df.evaluation_status == "train"].groupby(['item_id']).agg(['count']).max()
-c =df[df.evaluation_status == "train"].groupby(['item_id']).agg(['count']).min()
-print(a, b,c)
+b = df[df.evaluation_status == "train"].groupby(['item_id']).agg(['count']).max()
+c = df[df.evaluation_status == "train"].groupby(['item_id']).agg(['count']).min()
+print(a, b, c)
 
 sys.exit()
 # item_id group by count
