@@ -92,9 +92,12 @@ if __name__ == '__main__':
         print("index total", total)
         print(query_embeddings.shape, index_embeddings.shape)
 
-        if args.save != "0" and i == 0:
-            np.save(os.path.join(args.model_dir, "query_labels.npy"), all_query_labels)
-            np.save(os.path.join(args.model_dir, "index_labels.npy"), all_index_labels)
+        if args.save != "0":
+            np.save(os.path.join(args.model_dir, "query_embeddings_%s.npy" % cur_cp_name), query_embeddings)
+            np.save(os.path.join(args.model_dir, "index_embeddings_%s.npy" % cur_cp_name), index_embeddings)
+            if i == 0:
+                np.save(os.path.join(args.model_dir, "query_labels.npy"), all_query_labels)
+                np.save(os.path.join(args.model_dir, "index_labels.npy"), all_index_labels)
 
         tf.reset_default_graph()
 

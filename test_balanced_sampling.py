@@ -58,7 +58,7 @@ def _make_balanced_batched_dataset(datasets, num_classes, num_classes_per_batch,
     #                 yield label
 
     # selector = tf.data.Dataset.from_generator(generator, tf.int64)
-    seed_ph = tf.placeholder(tf.int64, [], "seed")
+    # seed_ph = tf.placeholder(tf.int64, [], "seed")
 
     def generator(_):
         # Sample `num_classes_per_batch` classes for the batch
@@ -78,7 +78,7 @@ def _make_balanced_batched_dataset(datasets, num_classes, num_classes_per_batch,
     batch_size = num_classes_per_batch * num_images_per_class
     dataset = dataset.batch(batch_size)
 
-    return dataset, seed_ph
+    return dataset  # , seed_ph
 
 
 def balanced_train_input_fn(dataset):
@@ -94,15 +94,15 @@ def balanced_train_input_fn(dataset):
     print("gogo")
     print(datasets)
 
-    dataset, seed_ph = _make_balanced_batched_dataset(datasets,
-                                                      10,
-                                                      4,
-                                                      4)
+    dataset = _make_balanced_batched_dataset(datasets,
+                                             10,
+                                             4,
+                                             4)
 
     # TODO: check that `buffer_size=None` works
     dataset = dataset.prefetch(None)
 
-    return dataset, seed_ph
+    return dataset  # , seed_ph
 
 
 import glob, os
