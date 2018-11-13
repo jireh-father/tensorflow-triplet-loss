@@ -39,7 +39,6 @@ F = fl.FLAGS
 
 def runner():
     p = Process(target=trainer.main, args=(F,))
-    p.daemon = True
     p.start()
     if not F.parallel_exec:
         p.join()

@@ -1,9 +1,0 @@
-[
-  {
-    "dataset_name": "title",
-    "image_dir": "E:/data/adience_kaggle/test",
-    "tfrecord_output": "E:/data/adience_kaggle/test",
-    "parallel_exec": false,
-    "num_shards": 1
-  }
-]

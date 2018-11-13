@@ -89,12 +89,15 @@ def balanced_train_input_fn(dataset):
     """
 
     # pylint: disable=cell-var-from-loop
-    datasets = [dataset.filter(lambda img, lab: tf.equal(lab, i)) for i in range(3)]
+    print("go")
+    datasets = [dataset.filter(lambda img, lab: tf.equal(lab, i)) for i in range(10)]
+    print("gogo")
+    print(datasets)
 
     dataset, seed_ph = _make_balanced_batched_dataset(datasets,
-                                                      3,
-                                                      3,
-                                                      3)
+                                                      10,
+                                                      4,
+                                                      4)
 
     # TODO: check that `buffer_size=None` works
     dataset = dataset.prefetch(None)
@@ -129,7 +132,7 @@ def train_pre_process(example_proto):
     return image, label
 
 
-data_dir = "D:\\data\\fashion_image_retrieval\\deep_fashion\\In-shop Clothes Retrieval Benchmark\\tfrecord"
+data_dir = "F:\develop\\tensorflow-image-classification-framework\mnist"
 files = glob.glob(os.path.join(data_dir, "*_train_*tfrecord"))
 print(files)
 dataset = tf.data.TFRecordDataset(files)
@@ -175,6 +178,10 @@ for i in range(1):
             # sys.exit()
 
             # images, lll = sess.run([img, index_labels],feed_dict={seed_ph:1, seed_ph2:1})
+            lll = sess.run(index_labels)
+            # print(images[1])
+            print(lll)
+            break
             images, lll = sess.run([img, index_labels])
             # print(images[1])
             print(lll)
@@ -217,4 +224,3 @@ for i in range(1):
         except tf.errors.OutOfRangeError:
             print("EXPCE")
             break
-sys.exit()

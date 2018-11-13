@@ -1,6 +1,7 @@
 """Create the input data pipeline using `tf.data`"""
 
 from model import tfrecords_dataset as td
+import tensorflow as tf
 
 
 def train_input_fn(data_dir, params):
@@ -18,7 +19,8 @@ def train_input_fn(data_dir, params):
     import tensorflow as tf
     shuffle_rand_seed_ph = tf.placeholder(tf.int64, ())
     dataset = dataset.shuffle(1000)  # whole dataset into the buffer
-    dataset = dataset.repeat(params.num_epochs)  # r                                                                                                                                                                                                                                                                                                                 epeat for multiple epochs
+    dataset = dataset.repeat(
+        params.num_epochs)  # r                                                                                                                                                                                                                                                                                                                 epeat for multiple epochs
     dataset = dataset.batch(params.batch_size)
     dataset = dataset.prefetch(params.batch_size)  # make sure you always have one batch ready to serve
     return dataset, shuffle_rand_seed_ph
@@ -101,6 +103,14 @@ def test_label_fn(data_dir, params):
     return dataset
 
 
+def count_records(tfrecord_filenames):
+    c = 0
+    for fn in tfrecord_filenames:
+        for _ in tf.python_io.tf_record_iterator(fn):
+            c += 1
+    return c
+
+
 def query_label_fn(data_dir, params):
     """Test input function for the MNIST dataset.
 
@@ -108,10 +118,11 @@ def query_label_fn(data_dir, params):
         data_dir: (string) path to the data directory
         params: (Params) contains hyperparameters of the model (ex: `params.num_epochs`)
     """
-    dataset = td.query_label(data_dir)
-    dataset = dataset.batch(params.query_cnt)
+    dataset, files = td.query_label(data_dir)
+    cnt = count_records(files)
+    dataset = dataset.batch(cnt)
     # dataset = dataset.prefetch(params.batch_size)  # make sure you always have one batch ready to serve
-    return dataset
+    return dataset, cnt
 
 
 def index_label_fn(data_dir, params):
@@ -121,7 +132,8 @@ def index_label_fn(data_dir, params):
         data_dir: (string) path to the data directory
         params: (Params) contains hyperparameters of the model (ex: `params.num_epochs`)
     """
-    dataset = td.index_label(data_dir)
-    dataset = dataset.batch(params.index_cnt)
+    dataset, files = td.index_label(data_dir)
+    cnt = count_records(files)
+    dataset = dataset.batch(cnt)
     # dataset = dataset.prefetch(params.batch_size)  # make sure you always have one batch ready to serve
-    return dataset
+    return dataset, cnt

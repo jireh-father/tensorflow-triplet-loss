@@ -114,14 +114,14 @@ def query_label(directory):
     files = glob.glob(os.path.join(directory, "*_query_*tfrecord"))
     files.sort()
     assert len(files) > 0
-    return dataset(files, only_label)
+    return dataset(files, only_label), files
 
 
 def index_label(directory):
     files = glob.glob(os.path.join(directory, "*_index_*tfrecord"))
     files.sort()
     assert len(files) > 0
-    return dataset(files, only_label)
+    return dataset(files, only_label), files
 
 
 def train_label(directory):

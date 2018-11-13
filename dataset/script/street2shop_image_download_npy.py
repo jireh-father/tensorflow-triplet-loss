@@ -10,16 +10,17 @@ import requests
 import imghdr
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--output_dir', default='D:/data/fashion/image_retrieval/street2shop/images',
-                    help="Experiment directory containing params.json")
-parser.add_argument('--data_file', default='D:/data/fashion/image_retrieval/street2shop/photos/remain_photos.npy',
-                    help="Directory containing the dataset")
-
-
-# parser.add_argument('--output_dir', default='/home/data/street2shop/images',
+# parser.add_argument('--output_dir', default='D:/data/fashion/image_retrieval/street2shop/images',
 #                     help="Experiment directory containing params.json")
-# parser.add_argument('--data_file', default='/home/data/street2shop/url/1_photos.npy',
+# parser.add_argument('--data_file', default='D:/data/fashion/image_retrieval/street2shop/photos/remain_photos.npy',
 #                     help="Directory containing the dataset")
+
+
+parser.add_argument('--output_dir', default='/home/data/street2shop/images',
+                    help="Experiment directory containing params.json")
+parser.add_argument('--data_file',
+                    default='/home/data/street2shop/url/download_error_19247f3b-41cf-4cc6-8339-bb4fc0db2fde.npy',
+                    help="Directory containing the dataset")
 
 
 def download(url, file_path):
@@ -64,8 +65,7 @@ image_error = []
 convert_error = []
 success = 0
 lines = np.load(args.data_file)
-for line_raw in lines:
-    line = line_raw.rstrip('\n').split(",")
+for line in lines:
     o = urlparse(line[1])
     file_name = str(int(line[0]))
     url = line[1]

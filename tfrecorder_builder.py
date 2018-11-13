@@ -35,8 +35,10 @@ def _get_filenames_and_classes(image_dir):
 
     photo_filenames = []
     # todo: handle both uppercase and lowercase
-    # exts = ["jpg", "JPEG", "JPG", "jpeg"]
-    exts = ["jpg", "jpeg"]
+    if os.name == 'nt':
+        exts = ["jpg", "jpeg"]
+    else:
+        exts = ["jpg", "JPEG", "JPG", "jpeg"]
     for directory in directories:
         for ext in exts:
             for path in glob.glob(os.path.join(directory, "*.%s" % ext)):
@@ -67,7 +69,7 @@ class ImageReader(object):
         return image
 
 
-def _convert_dataset(dataset_name, phase_name, filenames, class_names_to_ids, dataset_dir, output_dir, num_shards,
+def _convert_dataset(dataset_name, phase_name, filenames, class_names_to_ids, output_dir, num_shards,
                      num_channels=3):
     """Converts the given filenames to a TFRecord dataset.
 
@@ -147,7 +149,7 @@ def make_tfrecords(dataset_name, phase_name, image_dir, output_dir, num_shards, 
 
     # todo: add bounding box, landmarks, etc data
     # First, convert the training and validation sets.
-    _convert_dataset(dataset_name, phase_name, photo_filenames, class_names_to_ids, image_dir, output_dir, num_shards,
+    _convert_dataset(dataset_name, phase_name, photo_filenames, class_names_to_ids, output_dir, num_shards,
                      num_channels)
 
     # Finally, write the labels file:
@@ -161,32 +163,29 @@ def make_tfrecords(dataset_name, phase_name, image_dir, output_dir, num_shards, 
 
 if __name__ == '__main__':
     fl = tf.app.flags
-    fl.DEFINE_string('config_file', "dataset_config.json", "")
-    fl.DEFINE_boolean('parallel_exec', False, '')
+    fl.DEFINE_boolean('parallel_exec', True, '')
+    fl.DEFINE_boolean('recursive', True, '')
 
     fl.DEFINE_string('dataset_name', "deepfashion", "")
     fl.DEFINE_string('phase_name', "train", "")
-    fl.DEFINE_string('image_dir', 'd:/data/deepfashion/image_dir', '')
-    fl.DEFINE_string('tfrecord_output', 'd:/data/deepfashion/tfrecord', '')
+    fl.DEFINE_string('image_dir', 'D:/data/fashion/image_retrieval/deep_fashion/consumer-to-shop/tfrecord_images', '')
+    fl.DEFINE_string('tfrecord_output', 'D:/data/fashion/image_retrieval/deep_fashion/consumer-to-shop/tfrecords', '')
     fl.DEFINE_integer('num_channels', 3, '')
-    fl.DEFINE_integer('num_shards', 4, '')
+    fl.DEFINE_integer('num_shards', 8, '')
     fl.DEFINE_boolean('remove_images', False, '')
 
     F = tf.app.flags.FLAGS
 
-    if os.path.isfile(F.config_file):
-        configs = json.load(open(F.config_file))
-        for i, conf in enumerate(configs):
-            bak_conf = util.set_flags(conf)
+    if F.recursive:
+        image_dirs = glob.glob(os.path.join(F.image_dir, "*"))
+        for image_dir in image_dirs:
             p = Process(target=make_tfrecords, args=(
-                F.dataset_name, F.phase_name, F.image_dir, F.tfrecord_output, F.num_shards, F.num_channels,
-                F.remove_images,))
-            p.daemon = True
-            print("start to build tfrecords", conf)
+                F.dataset_name, os.path.basename(image_dir), image_dir, F.tfrecord_output, F.num_shards,
+                F.num_channels, F.remove_images,))
+            print("started to build tfrecords: %s" % (image_dir))
             p.start()
             if not F.parallel_exec:
                 p.join()
-            util.restore_flags(bak_conf)
     else:
         make_tfrecords(F.dataset_name, F.phase_name, F.image_dir, F.tfrecord_output, F.num_shards, F.num_channels,
                        F.remove_images)

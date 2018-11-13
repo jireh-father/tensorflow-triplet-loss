@@ -23,6 +23,7 @@ category_prd_stat = df.groupby('subCategory2').productId.nunique() * 0.5
 # sys.exit()
 # nono! count by productId
 category_prd_stat = category_prd_stat.astype(int)
+
 aggregation_functions = {'subCategory2': 'first', 'productId': 'first'}
 df_new = df.groupby(df['productId']).aggregate(aggregation_functions)
 print(category_prd_stat)
