@@ -37,11 +37,18 @@ if __name__ == '__main__':
     params = Params(json_path)
 
     model_files = glob.glob(os.path.join(args.model_dir, "model.ckpt-*.data*"))
+    cp_f = open(os.path.join(args.model_dir, "checkpoint"))
+    bak_cp_file = cp_f.readlines()
+    cp_f.close()
     for i, model_file in enumerate(model_files):
         cur_cp_name = "model.%s" % model_file.split(".")[1]
-        checkpoint_list = open(os.path.join(args.model_dir, "checkpoint")).readlines()
-        checkpoint_list[0] = 'model_checkpoint_path: "%s"' % cur_cp_name
-        open(os.path.join(args.model_dir, "checkpoint"), mode="w+").writelines(checkpoint_list)
+        cp_f = open(os.path.join(args.model_dir, "checkpoint"))
+        checkpoint_list = cp_f.readlines()
+        cp_f.close()
+        checkpoint_list[0] = 'model_checkpoint_path: "%s"\n' % cur_cp_name
+        cp_f = open(os.path.join(args.model_dir, "checkpoint"), mode="w+")
+        cp_f.writelines(checkpoint_list)
+        cp_f.close()
 
         # Define the model
         tf.logging.info("Creating the model...")
@@ -146,3 +153,6 @@ if __name__ == '__main__':
         print(accuracy_list)
         print("top %s accuracy" % args.max_top_k,
               float(accuracy_list[int(args.max_top_k) - 1][0]) / float(len(query_labels)))
+    cp_f = open(os.path.join(args.model_dir, "checkpoint"), mode="w+")
+    cp_f.writelines(bak_cp_file)
+    cp_f.close()
