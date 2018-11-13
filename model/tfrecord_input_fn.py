@@ -12,18 +12,18 @@ def train_input_fn(data_dir, params):
         params: (Params) contains hyperparameters of the model (ex: `params.num_epochs`)
     """
     dataset = td.train(data_dir)
-    if hasattr(params, "shuffle_rand_seed"):
-        shuffle_rand_seed = params.shuffle_rand_seed
-    else:
-        shuffle_rand_seed = 1
-    import tensorflow as tf
-    shuffle_rand_seed_ph = tf.placeholder(tf.int64, ())
+    # if hasattr(params, "shuffle_rand_seed"):
+    #     shuffle_rand_seed = params.shuffle_rand_seed
+    # else:
+    #     shuffle_rand_seed = 1
+    # import tensorflow as tf
+    # shuffle_rand_seed_ph = tf.placeholder(tf.int64, ())
     dataset = dataset.shuffle(1000)  # whole dataset into the buffer
     dataset = dataset.repeat(
         params.num_epochs)  # r                                                                                                                                                                                                                                                                                                                 epeat for multiple epochs
     dataset = dataset.batch(params.batch_size)
     dataset = dataset.prefetch(params.batch_size)  # make sure you always have one batch ready to serve
-    return dataset, shuffle_rand_seed_ph
+    return dataset  # , shuffle_rand_seed_ph
 
 
 def train_input_fn_once(data_dir, params):

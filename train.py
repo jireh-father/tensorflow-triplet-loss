@@ -13,18 +13,19 @@ import glob
 import util
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--model_dir', default='experiments/base_model',
+parser.add_argument('--model_dir', default='experiments/alexnet',
                     help="Experiment directory containing params.json")
 # parser.add_argument('--model_dir', default='experiments/alexnet',
 #                     help="Experiment directory containing params.json")
 # parser.add_argument('--data_dir', default='D:/data/deep_fashion/In-shop Clothes Retrieval Benchmark/tfrecord',
 #                     help="Directory containing the dataset")
-parser.add_argument('--data_dir', default='D:\data\pattern\img',
-                    help="Directory containing the dataset")
-# parser.add_argument('--dataset_name', default='tfrecord',
+# parser.add_argument('--data_dir', default='D:\data\pattern\img',
 #                     help="Directory containing the dataset")
-parser.add_argument('--dataset_name', default='mnist',
+parser.add_argument('--data_dir', default='D:/data/fashion/image_retrieval/cafe24product')
+parser.add_argument('--dataset_name', default='tfrecord',
                     help="Directory containing the dataset")
+# parser.add_argument('--dataset_name', default='mnist',
+#                     help="Directory containing the dataset")
 parser.add_argument('--save_checkpoints_steps', default=None,
                     help="Directory containing the dataset")
 parser.add_argument('--keep_checkpoint_max', default=20,
