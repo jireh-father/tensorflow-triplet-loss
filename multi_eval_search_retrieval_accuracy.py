@@ -37,7 +37,7 @@ if __name__ == '__main__':
     params = Params(json_path)
 
     model_files = glob.glob(os.path.join(args.model_dir, "model.ckpt-*.data*"))
-    for model_file in model_files:
+    for i, model_file in enumerate(model_files):
         cur_cp_name = "model.%s" % model_file.split(".")[1]
         checkpoint_list = open(os.path.join(args.model_dir, "checkpoint")).readlines()
         checkpoint_list[0] = 'model_checkpoint_path: "%s"' % cur_cp_name
@@ -85,9 +85,7 @@ if __name__ == '__main__':
         print("index total", total)
         print(query_embeddings.shape, index_embeddings.shape)
 
-        if args != "0":
-            np.save(os.path.join(args.model_dir, "query_embeddings.npy"), query_embeddings)
-            np.save(os.path.join(args.model_dir, "index_embeddings.npy"), index_embeddings)
+        if args.save != "0" and i == 0:
             np.save(os.path.join(args.model_dir, "query_labels.npy"), all_query_labels)
             np.save(os.path.join(args.model_dir, "index_labels.npy"), all_index_labels)
 
@@ -141,11 +139,10 @@ if __name__ == '__main__':
         # np.save(os.path.join(args.model_dir, "true_indices.npy"), true_indices)
         import json
 
-        json.dump(true_indices, open(os.path.join(args.model_dir, "true_indices.json"), "w+"))
-
-        json.dump(false_indices, open(os.path.join(args.model_dir, "false_indices.json"), "w+"))
-        json.dump(accuracy_list, open(os.path.join(args.model_dir, "accuracy_list.json"), "w+"))
-        json.dump(accuracies, open(os.path.join(args.model_dir, "accuracies.json"), "w+"))
+        json.dump(true_indices, open(os.path.join(args.model_dir, "true_indices_%s.json" % cur_cp_name), "w+"))
+        json.dump(false_indices, open(os.path.join(args.model_dir, "false_indices_%s.json" % cur_cp_name), "w+"))
+        json.dump(accuracy_list, open(os.path.join(args.model_dir, "accuracy_list_%s.json" % cur_cp_name), "w+"))
+        json.dump(accuracies, open(os.path.join(args.model_dir, "accuracies_%s.json" % cur_cp_name), "w+"))
         print(accuracy_list)
         print("top %s accuracy" % args.max_top_k,
               float(accuracy_list[int(args.max_top_k) - 1][0]) / float(len(query_labels)))
