@@ -24,7 +24,8 @@ parser.add_argument('--save', default='0',
                     help="Directory containing the dataset")
 parser.add_argument('--max_top_k', default=100,
                     help="Directory containing the dataset")
-
+parser.add_argument('--embedding_size', default=128,
+                    help="Directory containing the dataset")
 if __name__ == '__main__':
     tf.reset_default_graph()
     tf.logging.set_verbosity(tf.logging.INFO)

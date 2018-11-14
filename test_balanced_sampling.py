@@ -96,8 +96,8 @@ def balanced_train_input_fn(dataset):
 
     dataset = _make_balanced_batched_dataset(datasets,
                                              10,
-                                             4,
-                                             4)
+                                             2,
+                                             2)
 
     # TODO: check that `buffer_size=None` works
     dataset = dataset.prefetch(None)
@@ -116,16 +116,16 @@ def train_pre_process(example_proto):
                 }
     parsed_features = tf.parse_single_example(example_proto, features)
 
-    image = tf.image.decode_jpeg(parsed_features["image/encoded"], 3)
-    image = tf.cast(image, tf.float32)
-
-    image = tf.expand_dims(image, 0)
-    image = tf.image.resize_bilinear(image, [224, 224], align_corners=False)
-    image = tf.squeeze(image, [0])
-
-    image = tf.divide(image, 255.0)
-    image = tf.subtract(image, 0.5)
-    image = tf.multiply(image, 2.0)
+    image = tf.image.decode_jpeg(parsed_features["image/encoded"], 1)
+    # image = tf.cast(image, tf.float32)
+    #
+    # image = tf.expand_dims(image, 0)
+    # image = tf.image.resize_bilinear(image, [224, 224], align_corners=False)
+    # image = tf.squeeze(image, [0])
+    #
+    # image = tf.divide(image, 255.0)
+    # image = tf.subtract(image, 0.5)
+    # image = tf.multiply(image, 2.0)
 
     label = parsed_features["image/class/label"]
     # return parsed_features["image/encoded"], label
@@ -146,15 +146,15 @@ dataset2 = tf.data.TFRecordDataset(files)
 dataset2 = dataset2.map(train_pre_process)
 # dataset = tf.data.Dataset.zip((dataset, dataset2))
 
-dataset, seed_ph = balanced_train_input_fn(dataset)
-dataset2, seed_ph2 = balanced_train_input_fn(dataset2)
+dataset = balanced_train_input_fn(dataset)
+# dataset2 = balanced_train_input_fn(dataset2)
 # dataset = tf.data.Dataset.zip((dataset, dataset2))
-# iterator = dataset.make_one_shot_iterator()
+iterator = dataset.make_one_shot_iterator()
 # iterator = dataset.make_initializable_iterator()
-iterator = tf.data.Iterator.from_structure(dataset.output_types,
-                                           dataset.output_shapes)
+# iterator = tf.data.Iterator.from_structure(dataset.output_types,
+#                                            dataset.output_shapes)
 img, index_labels = iterator.get_next()
-training_init_op = iterator.make_initializer(dataset)
+# training_init_op = iterator.make_initializer(dataset)
 # iterator2 = dataset2.make_one_shot_iterator()
 # img2, index_labels2 = iterator2.get_next()
 
@@ -162,7 +162,7 @@ tf_config = tf.ConfigProto()
 tf_config.gpu_options.allow_growth = True
 sess = tf.Session(config=tf_config)
 
-sess.run(training_init_op)
+# sess.run(training_init_op)
 # sess.run(iterator.initializer)
 print(1)
 for i in range(1):
