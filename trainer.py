@@ -66,8 +66,8 @@ def main(cf):
     sess.run(tf.global_variables_initializer())
 
     saver = tf.train.Saver(tf.global_variables(), max_to_keep=cf.keep_checkpoint_max)
-
-    saver.restore(sess, tf.train.latest_checkpoint(cf.save_dir))
+    if os.path.isdir(cf.save_dir):
+        saver.restore(sess, tf.train.latest_checkpoint(cf.save_dir))
 
     epoch = 1
     steps = 1
