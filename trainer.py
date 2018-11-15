@@ -5,6 +5,7 @@ from tensorflow.python.client import device_lib
 from core import model_fn
 import glob
 import dataset
+import numpy as np
 
 
 def main(cf):
@@ -52,11 +53,43 @@ def main(cf):
     tf_config = tf.ConfigProto()
     tf_config.gpu_options.allow_growth = True
     sess = tf.Session(config=tf_config)
-
-    for epoch in cf.num_epochs:
+    remain_images = None
+    remain_labels = None
+    import time
+    for epoch in range(cf.num_epochs):
+        step = 0
         sess.run(iterator.initializer)
-        tmp_images, tmp_labels = sess.run([images, labels])
-        tmp_labels
+        while True:
+            try:
+                start = time.time()
+                tmp_images, tmp_labels = sess.run([images, labels])
+                print("get data", time.time() - start)
+                pair_indices = set()
+                label_buffer = {}
+                start = time.time()
+                for i, tmp_label in enumerate(tmp_labels):
+                    if tmp_label in label_buffer:
+                        pair_indices.add(i)
+                        pair_indices.add(label_buffer[tmp_label])
+                    else:
+                        label_buffer[tmp_label] = i
+                print("find pairs", time.time() - start)
+                print(len(pair_indices))
+                step += 1
+                if (step == 20):
+                    sys.exit()
+                # if len(pair_indices) > cf.batch_size:
+                #     pair_indices = pair_indices[:cf.batch_size]
+                #     remain_pair_indices = pair_indices[cf.batch_size:]
+                # else:
+                #
+                #
+                # pair_labels = tmp_labels[list(pair_indices)]
+                #
+                # print(sorted_by_value)
+                # sys.exit()
+            except tf.errors.OutOfRangeError:
+                break
 
     ds_list = []
     label_map_list = []
@@ -132,7 +165,7 @@ def train():
 if __name__ == '__main__':
     fl = tf.app.flags
 
-    fl.DEFINE_string('data_dir', 'D:/data/fashion/image_retrieval/cafe24product', '')
+    fl.DEFINE_string('data_dir', 'D:/data/fashion/image_retrieval/cafe24product/tfrecord', '')
     fl.DEFINE_string('sampling_name', 'pk', 'pk, random...')
     fl.DEFINE_string('model_name', 'alexnet_v2', '')
     fl.DEFINE_integer('num_epochs', 10, '')
@@ -140,7 +173,7 @@ if __name__ == '__main__':
     fl.DEFINE_integer('input_channel', 3, '')
     fl.DEFINE_integer('embedding_size', 128, '')
     fl.DEFINE_string('preprocessing_name', 'default_preprocessing', '')
-    fl.DEFINE_integer('sampling_buffer_size', 1024, '')
+    fl.DEFINE_integer('sampling_buffer_size', 2048, '')
     fl.DEFINE_integer('shuffle_buffer_size', 1000, '')
     fl.DEFINE_integer('prefetch_buffer_size', 1024, '')
     fl.DEFINE_string('save_dir', 'experiments/base_model', '')
