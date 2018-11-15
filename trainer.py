@@ -49,6 +49,9 @@ def main(cf):
     files.sort()
     assert len(files) > 0
     num_examples = util.count_records(files)
+    steps_each_epoch = int(num_examples / cf.batch_size)
+    if num_examples % cf.batch_size > 0:
+        steps_each_epoch += 1
     dataset = tf.data.TFRecordDataset(files)
     dataset = dataset.map(train_pre_process)
     dataset = dataset.shuffle(cf.shuffle_buffer_size)
@@ -103,13 +106,12 @@ def main(cf):
             start = time.time()
             loss, _ = sess.run([loss_op, train_op], feed_dict={images_ph: batch_images, labels_ph: batch_labels})
             train_time = time.time() - start
-            print("[%d epoch, %d steps] sampling time: %f, train time: %f, loss: %f" % (
-                epoch, steps, sampling_time, train_time, loss))
+            print("[%d epoch(%d/%d), %d steps] sampling time: %f, train time: %f, loss: %f" % (
+                epoch, steps % steps_each_epoch, steps_each_epoch, steps, sampling_time, train_time, loss))
             steps += 1
             num_trained_images += cf.batch_size
-            saver.save(sess, cf.save_dir + "/model.ckpt", steps)
             if num_trained_images >= num_examples:
-                saver.save(sess, cf.save_dir + "/model", epoch)
+                saver.save(sess, cf.save_dir + "/model.ckpt", epoch)
                 epoch += 1
                 num_trained_images = 0
             if epoch >= cf.num_epochs:
