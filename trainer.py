@@ -1,10 +1,10 @@
 import os
-import util
 import tensorflow as tf
 from tensorflow.python.client import device_lib
 from model import model_fn
 import glob
 import util
+import time
 
 
 def main(cf):
@@ -14,8 +14,10 @@ def main(cf):
     # inputs_ph = tf.placeholder(tf.float32, [None, cf.input_size, cf.input_size, cf.input_channel],
     #                            name="inputs")
     # labels_ph = tf.placeholder(tf.int32, [None], name="labels")
+    tf.set_random_seed(123)
     images_ph = tf.placeholder(tf.float32, [None, cf.input_size, cf.input_size, cf.input_channel], name="inputs")
     labels_ph = tf.placeholder(tf.int32, [None], name="labels")
+    seed_ph = tf.placeholder(tf.int64, (), name="shuffle_seed")
     loss_op, train_op = model_fn.build_model(images_ph, labels_ph, cf, True)
 
     def train_pre_process(example_proto):
@@ -49,24 +51,31 @@ def main(cf):
     num_examples = util.count_records(files)
     dataset = tf.data.TFRecordDataset(files)
     dataset = dataset.map(train_pre_process)
-    dataset = dataset.shuffle(cf.shuffle_buffer_size)  # whole dataset into the buffer
+    dataset = dataset.shuffle(cf.shuffle_buffer_size)
     dataset = dataset.repeat()
     dataset = dataset.batch(cf.sampling_buffer_size)
     dataset = dataset.prefetch(cf.prefetch_buffer_size)
 
     iterator = dataset.make_one_shot_iterator()
+    # iterator = dataset.make_initializable_iterator()
     images, labels = iterator.get_next()
 
     tf_config = tf.ConfigProto()
     tf_config.gpu_options.allow_growth = True
     sess = tf.Session(config=tf_config)
     sess.run(tf.global_variables_initializer())
+
+    saver = tf.train.Saver(tf.global_variables(), max_to_keep=cf.keep_checkpoint_max)
+
+    saver.restore(sess, tf.train.latest_checkpoint(cf.save_dir))
+
     epoch = 1
     steps = 1
     num_trained_images = 0
     while True:
-        # sess.run(iterator.initializer)
+        # sess.run(iterator.initializer, feed_dict={seed_ph: steps})
         try:
+            start = time.time()
             tmp_images, tmp_labels = sess.run([images, labels])
             pair_indices = set()
             single_index_map = {}
@@ -85,16 +94,22 @@ def main(cf):
                 pair_indices = pair_indices[:cf.batch_size]
             elif len(pair_indices) < cf.batch_size:
                 pair_indices += list(single_index_map.values())[:cf.batch_size - len(pair_indices)]
-
+            # print(pair_indices)
             batch_images = tmp_images[pair_indices]
             batch_labels = tmp_labels[pair_indices]
+            sampling_time = time.time() - start
             tmp_images = None
             tmp_labels = None
+            start = time.time()
             loss, _ = sess.run([loss_op, train_op], feed_dict={images_ph: batch_images, labels_ph: batch_labels})
-            print("[%d epoch, %d steps] %f" % (epoch, steps, loss))
+            train_time = time.time() - start
+            print("[%d epoch, %d steps] sampling time: %f, train time: %f, loss: %f" % (
+                epoch, steps, sampling_time, train_time, loss))
             steps += 1
             num_trained_images += cf.batch_size
+            saver.save(sess, cf.save_dir + "/model.ckpt", steps)
             if num_trained_images >= num_examples:
+                saver.save(sess, cf.save_dir + "/model", epoch)
                 epoch += 1
                 num_trained_images = 0
             if epoch >= cf.num_epochs:
