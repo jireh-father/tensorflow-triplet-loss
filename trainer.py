@@ -7,20 +7,66 @@ import glob
 import dataset
 
 
-def main(config):
+def main(cf):
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
     os.environ["CUDA_VISIBLE_DEVICES"] = F.gpu_no
     print("CUDA Visible device", device_lib.list_local_devices())
 
+    def train_pre_process(example_proto):
+        features = {"image/encoded": tf.FixedLenFeature((), tf.string, default_value=""),
+                    "image/class/label": tf.FixedLenFeature((), tf.int64, default_value=0),
+                    'image/height': tf.FixedLenFeature((), tf.int64, default_value=0),
+                    'image/width': tf.FixedLenFeature((), tf.int64, default_value=0)
+                    }
+
+        parsed_features = tf.parse_single_example(example_proto, features)
+
+        image = tf.image.decode_jpeg(parsed_features["image/encoded"], 3)
+        image = tf.cast(image, tf.float32)
+
+        image = tf.expand_dims(image, 0)
+        image = tf.image.resize_bilinear(image, [224, 224], align_corners=False)
+        image = tf.squeeze(image, [0])
+
+        image = tf.divide(image, 255.0)
+        image = tf.subtract(image, 0.5)
+        image = tf.multiply(image, 2.0)
+
+        label = parsed_features["image/class/label"]
+
+        return image, label
+
+    files = glob.glob(os.path.join(cf.data_dir, "*_train_*tfrecord"))
+    files.sort()
+    assert len(files) > 0
+    dataset = tf.data.TFRecordDataset(files)
+    dataset = dataset.map(train_pre_process)
+    dataset = dataset.shuffle(cf.shuffle_buffer_size)  # whole dataset into the buffer
+    dataset = dataset.repeat(cf.num_epochs)
+    dataset = dataset.batch(cf.sampling_buffer_size)
+    dataset = dataset.prefetch(cf.prefetch_buffer_size)
+
+    iterator = dataset.make_initializable_iterator()
+    images, labels = iterator.get_next()
+
+    tf_config = tf.ConfigProto()
+    tf_config.gpu_options.allow_growth = True
+    sess = tf.Session(config=tf_config)
+
+    for epoch in cf.num_epochs:
+        sess.run(iterator.initializer)
+        tmp_images, tmp_labels = sess.run([images, labels])
+        tmp_labels
+
     ds_list = []
     label_map_list = []
     label_cnt_list = []
-    dataset_list = config.train_file_patterns.split("|")
+    dataset_list = cf.train_file_patterns.split("|")
     for i, path_pattern in enumerate(dataset_list):
         tfrecord_files = glob.glob(path_pattern)
         assert len(tfrecord_files) > 0
-        ds = dataset.build_dataset(tfrecord_files, config.preprocessing_name, config.shuffle_buffer_size,
-                                   config.sampling_buffer_size, config.num_map_parallel)
+        ds = dataset.build_dataset(tfrecord_files, cf.preprocessing_name, cf.shuffle_buffer_size,
+                                   cf.sampling_buffer_size, cf.num_map_parallel)
         ds_list.append(ds)
         label_map_list.append(util.create_label_map(tfrecord_files))
         label_cnt_list.append(len(label_map_list[i]))
@@ -28,27 +74,27 @@ def main(config):
             assert label_cnt_list[i] == label_cnt_list[i - 1]
             assert label_map_list[i] == label_map_list[i - 1]
 
-    inputs_ph = tf.placeholder(tf.float32, [None, config.input_size, config.input_size, config.input_channel],
+    inputs_ph = tf.placeholder(tf.float32, [None, cf.input_size, cf.input_size, cf.input_channel],
                                name="inputs")
     labels_ph = tf.placeholder(tf.int32, [None], name="labels")
 
     model_fn.build_model(inputs_ph, labels=labels_ph, mode=tf.estimator.ModeKeys.TRAIN)
 
-    assert config.model_name is not None
-    assert os.path.isfile(os.path.join("./models", config.model_name + ".py"))
-    model_f = util.get_attr('models.%s' % config.model_name, "build_model")
+    assert cf.model_name is not None
+    assert os.path.isfile(os.path.join("./models", cf.model_name + ".py"))
+    model_f = util.get_attr('models.%s' % cf.model_name, "build_model")
 
-    data_list = model_f(inputs_ph, config.embedding_size)
+    data_list = model_f(inputs_ph, cf.embedding_size)
 
-    assert config.sampling_name is not None
-    assert os.path.isfile(os.path.join("./samplings", config.sampling_name + ".py"))
-    sampling_f = util.get_attr('samplings.%s' % config.sampling_name, "samplings")
+    assert cf.sampling_name is not None
+    assert os.path.isfile(os.path.join("./samplings", cf.sampling_name + ".py"))
+    sampling_f = util.get_attr('samplings.%s' % cf.sampling_name, "samplings")
     data_list = sampling_f()
 
     sys.exit()
 
-    ds = dataset.build_dataset(tfrecord_files, config.preprocessing_name, config.shuffle_buffer_size,
-                               config.sampling_buffer_size, config.num_map_parallel)
+    ds = dataset.build_dataset(tfrecord_files, cf.preprocessing_name, cf.shuffle_buffer_size,
+                               cf.sampling_buffer_size, cf.num_map_parallel)
 
     index_iterator = ds.make_initializable_iterator()
 
@@ -86,23 +132,30 @@ def train():
 if __name__ == '__main__':
     fl = tf.app.flags
 
-    fl.DEFINE_string('train_file_patterns',
-                     'E:/data/adience_kaggle/test/*.tfrecord|E:/data/adience_kaggle/test2/*.tfrecord', '')
-    fl.DEFINE_boolean('parallel_exec', True, '')
+    fl.DEFINE_string('data_dir', 'D:/data/fashion/image_retrieval/cafe24product', '')
     fl.DEFINE_string('sampling_name', 'pk', 'pk, random...')
     fl.DEFINE_string('model_name', 'alexnet_v2', '')
-    fl.DEFINE_integer('nums_sampling_classes', 4, 'ony in case of pk sampling.')
+    fl.DEFINE_integer('num_epochs', 10, '')
     fl.DEFINE_integer('input_size', 224, '')
     fl.DEFINE_integer('input_channel', 3, '')
     fl.DEFINE_integer('embedding_size', 128, '')
     fl.DEFINE_string('preprocessing_name', 'default_preprocessing', '')
-    fl.DEFINE_integer('shuffle_buffer_size', 1000, '')
     fl.DEFINE_integer('sampling_buffer_size', 1024, '')
+    fl.DEFINE_integer('shuffle_buffer_size', 1000, '')
+    fl.DEFINE_integer('prefetch_buffer_size', 1024, '')
+    fl.DEFINE_string('save_dir', 'experiments/base_model', '')
+    fl.DEFINE_string('data_mid_name', 'val', '')
+    fl.DEFINE_integer('save_steps', 10000, '')
+    fl.DEFINE_integer('save_epochs', 1, '')
+    fl.DEFINE_integer('keep_checkpoint_max', 20, '')
+    fl.DEFINE_integer('batch_size', 128, '')
+    fl.DEFINE_integer('num_image_sampling', 4, '')
+    fl.DEFINE_integer('num_single_image_max', 4, '')
+
     fl.DEFINE_integer('num_map_parallel', 4, '')
     fl.DEFINE_string('gpu_no', "0", '')
     fl.DEFINE_float('weight_decay', 0.00004, '')
-    fl.DEFINE_string('optimizer', 'rmsprop', 'The name of the optimizer, one of "adadelta", "adagrad", "adam",'
-                                             '"ftrl", "momentum", "sgd"  "rmsprop".')
+    fl.DEFINE_string('optimizer', 'rmsprop', '"adadelta", "adagrad", "adam",''"ftrl", "momentum", "sgd"  "rmsprop".')
     fl.DEFINE_float('adadelta_rho', 0.95, 'The decay rate for adadelta.')
     fl.DEFINE_float('adagrad_initial_accumulator_value', 0.1, 'Starting value for the AdaGrad accumulators.')
     fl.DEFINE_float('adam_beta1', 0.9, 'The exponential decay rate for the 1st moment estimates.')
@@ -119,37 +172,13 @@ if __name__ == '__main__':
     #######################
     # Learning Rate Flags #
     #######################
-
-    fl.DEFINE_string('learning_rate_decay_type', 'exponential',
-                     'Specifies how the learning rate is decayed. One of "fixed", "exponential",'' or "polynomial"')
+    fl.DEFINE_string('learning_rate_decay_type', 'exponential', '"fixed", "exponential",'' or "polynomial"')
     fl.DEFINE_float('learning_rate', 0.01, 'Initial learning rate.')
-    fl.DEFINE_float('end_learning_rate', 0.0001,
-                    'The minimal end learning rate used by a polynomial decay learning rate.')
+    fl.DEFINE_float('end_learning_rate', 0.0001, 'The minimal end learning rate used by a polynomial decay.')
     fl.DEFINE_float('label_smoothing', 0.0, 'The amount of label smoothing.')
     fl.DEFINE_float('learning_rate_decay_factor', 0.94, 'Learning rate decay factor.')
-    tf.app.flags.DEFINE_float(
-        'num_epochs_per_decay', 2.0,
-        'Number of epochs after which learning rate decays.')
-    tf.app.flags.DEFINE_float(
-        'moving_average_decay', 0.9999,
-        'The decay to use for the moving average.'
-        'If left as None, then moving averages are not used.')
+    fl.DEFINE_float('num_epochs_per_decay', 2.0, 'Number of epochs after which learning rate decays.')
+    fl.DEFINE_float('moving_average_decay', 0.9999, 'The decay to use for the moving average.')
 
-    fl.DEFINE_string('save_dir', 'experiments/base_model', '')
-    fl.DEFINE_string('data_dirs', './data/mnist|./data/', '')
-    fl.DEFINE_string('data_files', None, '')
-    fl.DEFINE_string('data_name', 'deepfashion', '')
-    fl.DEFINE_string('data_mid_name', 'val', '')
-    fl.DEFINE_integer('test_step', 10000, '')
-    fl.DEFINE_integer('save_step', 10000, '')
-    fl.DEFINE_integer('save_epoch', 10000, '')
-    fl.DEFINE_integer('save_max', 10000, '')
-    fl.DEFINE_integer('epochs', 10000, '')
-    fl.DEFINE_integer('steps', 10000, '')
-    fl.DEFINE_boolean('random_shuffling', True, '')
-    fl.DEFINE_boolean('use_create_dataset_phase', True, '')
-    fl.DEFINE_boolean('use_train_phase', True, '')
-    fl.DEFINE_boolean('use_val_phase', False, '')
-    fl.DEFINE_boolean('use_test_phase', True, '')
     F = fl.FLAGS
     main(F)

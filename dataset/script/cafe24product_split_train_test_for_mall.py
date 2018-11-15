@@ -4,9 +4,9 @@ import random
 SEED = 1
 
 image_dir = "D:/data/cafe24_clothing_category/images_split_cate_and_prd"
-output_dir = "D:/data/cafe24_clothing_category/images_split_by_prd"
-train_dir = "D:/data/cafe24_clothing_category/images_split_by_prd/train"
-test_dir = "D:/data/cafe24_clothing_category/images_split_by_prd/test"
+output_dir = "D:/data/cafe24_clothing_category/images_split_by_malls"
+train_dir = "D:/data/cafe24_clothing_category/images_split_by_malls/train"
+test_dir = "D:/data/cafe24_clothing_category/images_split_by_malls/test"
 skip_categories = ["accessories", "bag", "cosmetics", "glasses", "gloves", "hat", "inner_wear",
                    "muffler", "socks", "swim_wear", "waistband", "watch", "long_skirt", "mini_skirt", "pants", "shoes",
                    "shorts", "skirt"]
@@ -35,7 +35,7 @@ for i, cate_dir in enumerate(cate_dirs):
             mall_prd_dir = os.path.basename(mall_test_dir)
 
             files = glob.glob(os.path.join(mall_test_dir, "*.jpg"))
-            output_dir = os.path.join(test_dir, mall_prd_dir)
+            output_dir = os.path.join(test_dir, mall_id)
             if not os.path.isdir(output_dir):
                 os.makedirs(output_dir)
             for file_path in files:
@@ -47,7 +47,7 @@ for i, cate_dir in enumerate(cate_dirs):
             print("dir %d/%d, file %d/%d" % (i, d_tot, j, tr_tot))
             mall_prd_dir = os.path.basename(mall_train_dir)
             files = glob.glob(os.path.join(mall_train_dir, "*.jpg"))
-            output_dir = os.path.join(train_dir, mall_prd_dir)
+            output_dir = os.path.join(train_dir, mall_id)
             if not os.path.isdir(output_dir):
                 os.makedirs(output_dir)
             for file_path in files:

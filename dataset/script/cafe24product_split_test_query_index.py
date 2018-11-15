@@ -3,7 +3,7 @@ import random
 
 SEED = 1
 
-test_dir = "D:/data/cafe24_clothing_category/images_test"
+test_dir = "D:/data/cafe24_clothing_category/images_split_by_prd/test"
 query_dir = "D:/data/cafe24_clothing_category/dataset_test/query"
 index_dir = "D:/data/cafe24_clothing_category/dataset_test/index"
 

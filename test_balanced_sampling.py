@@ -1,78 +1,27 @@
 import tensorflow as tf
-# from tensorflow.contrib.data.python.ops.interleave_ops import DirectedInterleaveDataset
-
-import model.mnist_dataset as mnist_dataset
-
-
-# Define the data pipeline
-# mnist = mnist_dataset.train(args.data_dir)
-#
-# datasets = [mnist.filter(lambda img, lab: tf.equal(lab, i)) for i in range(params.num_labels)]
-#
-#
-# def generator():
-#     while True:
-#         # Sample the labels that will compose the batch
-#         labels = np.random.choice(range(params.num_labels),
-#                                   params.num_classes_per_batch,
-#                                   replace=False)
-#         for label in labels:
-#             for _ in range(params.num_images_per_class):
-#                 yield label
-#
-#
-# selector = tf.data.Dataset.from_generator(generator, tf.int64)
-# dataset = DirectedInterleaveDataset(selector, datasets)
-#
-# batch_size = params.num_classes_per_batch * params.num_images_per_class
-# dataset = dataset.batch(batch_size)
-# dataset = dataset.prefetch(1)
 
 
 def _make_balanced_batched_dataset(datasets, num_classes, num_classes_per_batch,
                                    num_images_per_class):
-    """Create a dataset with balanced batches sampling from multiple datasets.
-    For instance if we have 3 datasets representing classes 0, 1 and 2, and we want to create
-    batches containing 2 different classes with 3 images each, the labels of a batch could be:
-        2, 2, 2, 0, 0, 0
-    Or:
-        1, 1, 1, 2, 2, 2
-    The total batch size in this case is 6.
-    Args:
-        datasets: (list of Datasets) the datasets to sample from
-        num_classes: (int) number of classes, each dataset represents one class
-        num_classes_per_batch: (int) number of different classes composing a batch
-        num_images_per_class: (int) number of different images from a class in a batch
-    """
     assert len(datasets) == num_classes, \
         "There should be {} datasets, got {}".format(num_classes, len(datasets))
-
-    # def generator():
-    #     while True:
-    #         # Sample the labels that will compose the batch
-    #         labels = np.random.choice(range(num_classes),
-    #                                   num_classes_per_batch,
-    #                                   replace=False)
-    #         for label in labels:
-    #             for _ in range(num_images_per_class):
-    #                 yield label
-
-    # selector = tf.data.Dataset.from_generator(generator, tf.int64)
-    # seed_ph = tf.placeholder(tf.int64, [], "seed")
 
     def generator(_):
         # Sample `num_classes_per_batch` classes for the batch
         sampled = tf.random_shuffle(tf.range(num_classes), 1)[:num_classes_per_batch]
         # Repeat each element `num_images_per_class` times
+        print(sampled)
+        print(tf.expand_dims(sampled, -1))
         batch_labels = tf.tile(tf.expand_dims(sampled, -1), [1, num_images_per_class])
+        print(batch_labels)
+        print(tf.reshape(batch_labels, [-1]))
+        sys.exit()
         return tf.to_int64(tf.reshape(batch_labels, [-1]))
 
     selector = tf.contrib.data.Counter().map(generator)
     selector = selector.apply(tf.contrib.data.unbatch())
 
     dataset = tf.contrib.data.choose_from_datasets(datasets, selector)
-
-    # dataset = DirectedInterleaveDataset(selector, datasets)
 
     # Batch
     batch_size = num_classes_per_batch * num_images_per_class
@@ -82,21 +31,18 @@ def _make_balanced_batched_dataset(datasets, num_classes, num_classes_per_batch,
 
 
 def balanced_train_input_fn(dataset):
-    """Train input function for the MNIST dataset with balanced batches.
-    Args:
-        data_dir: (string) path to the data directory
-        params: (Params) contains hyperparameters of the model (ex: `params.num_epochs`)
-    """
-
-    # pylint: disable=cell-var-from-loop
     print("go")
-    datasets = [dataset.filter(lambda img, lab: tf.equal(lab, i)) for i in range(10)]
+    datasets=[]
+    for i in range(2):
+        print(i, 2)
+        datasets.append(dataset.filter(lambda img, lab: tf.equal(lab, i)))
+    # datasets = [dataset.filter(lambda img, lab: tf.equal(lab, i)) for i in range(40989)]
     print("gogo")
     print(datasets)
 
     dataset = _make_balanced_batched_dataset(datasets,
-                                             10,
                                              2,
+                                             4,
                                              2)
 
     # TODO: check that `buffer_size=None` works
@@ -132,15 +78,15 @@ def train_pre_process(example_proto):
     return image, label
 
 
-data_dir = "F:\develop\\tensorflow-image-classification-framework\mnist"
-files = glob.glob(os.path.join(data_dir, "*_train_*tfrecord"))
+data_dir = "D:\data\\fashion\image_retrieval\cafe24product"
+files = glob.glob(os.path.join(data_dir, "*_query_*tfrecord"))
 print(files)
 dataset = tf.data.TFRecordDataset(files)
 dataset = dataset.map(train_pre_process)
 
 # data_dir = "c:\source/tensorflow-image-classification-framework/mnist"
 # files = glob.glob(os.path.join(data_dir, "*_validation_*tfrecord"))
-files = glob.glob(os.path.join(data_dir, "*_train_*tfrecord"))
+# files = glob.glob(os.path.join(data_dir, "*_train_*tfrecord"))
 print(files)
 dataset2 = tf.data.TFRecordDataset(files)
 dataset2 = dataset2.map(train_pre_process)

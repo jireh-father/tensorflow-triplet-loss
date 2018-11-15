@@ -21,7 +21,7 @@ parser.add_argument('--model_dir', default='experiments/alexnet',
 #                     help="Directory containing the dataset")
 # parser.add_argument('--data_dir', default='D:\data\pattern\img',
 #                     help="Directory containing the dataset")
-parser.add_argument('--data_dir', default='D:/data/fashion/image_retrieval/cafe24product')
+parser.add_argument('--data_dir', default='D:/data/fashion/image_retrieval/cafe24product/tfrecord')
 parser.add_argument('--dataset_name', default='tfrecord',
                     help="Directory containing the dataset")
 # parser.add_argument('--dataset_name', default='mnist',
@@ -30,10 +30,12 @@ parser.add_argument('--save_checkpoints_steps', default=None,
                     help="Directory containing the dataset")
 parser.add_argument('--keep_checkpoint_max', default=20,
                     help="Directory containing the dataset")
-parser.add_argument('--num_class_sampling', default=32,
+parser.add_argument('--batch_size', default=128,
                     help="Directory containing the dataset")
-parser.add_argument('--num_image_sampling', default=4,
-                    help="Directory containing the dataset")
+# parser.add_argument('--num_class_sampling', default=32,
+#                     help="Directory containing the dataset")
+# parser.add_argument('--num_image_sampling', default=4,
+#                     help="Directory containing the dataset")
 parser.add_argument('--save_checkpoints_epochs', default=1,
                     help="Directory containing the dataset")
 
@@ -47,7 +49,7 @@ if __name__ == '__main__':
     json_path = os.path.join(args.model_dir, 'params.json')
     assert os.path.isfile(json_path), "No json configuration file found at {}".format(json_path)
     params = Params(json_path)
-    params.batch_size = int(args.num_class_sampling) * int(args.num_image_sampling)
+    params.batch_size = int(args.batch_size)
 
     assert args.save_checkpoints_steps is not None or args.save_checkpoints_epochs is not None
 

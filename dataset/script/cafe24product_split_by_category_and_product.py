@@ -7,6 +7,7 @@ dirs = glob.glob(os.path.join(image_dir, "*"))
 d_tot = len(dirs)
 for i, d in enumerate(dirs):
     category = os.path.basename(d)
+
     files = glob.glob(os.path.join(d, "*.jpg"))
     f_tot = len(files)
     for j, f in enumerate(files):

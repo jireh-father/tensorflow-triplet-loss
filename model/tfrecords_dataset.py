@@ -28,7 +28,8 @@ def train_pre_process(example_proto):
     image = tf.cast(image, tf.float32)
 
     image = tf.expand_dims(image, 0)
-    image = tf.image.resize_bilinear(image, [224, 224], align_corners=False)
+    image = tf.image.resize_image_with_pad(image, 224, 224)
+    # image = tf.image.resize_bilinear(image, [224, 224], align_corners=False)
     image = tf.squeeze(image, [0])
 
     image = tf.divide(image, 255.0)
@@ -53,7 +54,8 @@ def test_pre_process(example_proto):
     image = tf.cast(image, tf.float32)
 
     image = tf.expand_dims(image, 0)
-    image = tf.image.resize_bilinear(image, [224, 224], align_corners=False)
+    image = tf.image.resize_image_with_pad(image, 224, 224)
+    # image = tf.image.resize_bilinear(image, [224, 224], align_corners=False)
     image = tf.squeeze(image, [0])
 
     image = tf.divide(image, 255.0)
