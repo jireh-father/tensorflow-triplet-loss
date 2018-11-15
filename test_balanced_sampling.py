@@ -10,12 +10,7 @@ def _make_balanced_batched_dataset(datasets, num_classes, num_classes_per_batch,
         # Sample `num_classes_per_batch` classes for the batch
         sampled = tf.random_shuffle(tf.range(num_classes), 1)[:num_classes_per_batch]
         # Repeat each element `num_images_per_class` times
-        print(sampled)
-        print(tf.expand_dims(sampled, -1))
         batch_labels = tf.tile(tf.expand_dims(sampled, -1), [1, num_images_per_class])
-        print(batch_labels)
-        print(tf.reshape(batch_labels, [-1]))
-        sys.exit()
         return tf.to_int64(tf.reshape(batch_labels, [-1]))
 
     selector = tf.contrib.data.Counter().map(generator)
@@ -78,11 +73,15 @@ def train_pre_process(example_proto):
     return image, label
 
 
-data_dir = "D:\data\\fashion\image_retrieval\cafe24product"
+data_dir = "D:\data\\fashion\image_retrieval\cafe24product/tfrecord"
 files = glob.glob(os.path.join(data_dir, "*_query_*tfrecord"))
 print(files)
 dataset = tf.data.TFRecordDataset(files)
 dataset = dataset.map(train_pre_process)
+sampled = tf.random_shuffle(tf.range(2), 1)[:2]
+print(sampled)
+dataset = dataset.filter(lambda img, lab: tf.equal(lab, i))
+dataset = dataset.shuffle(100)
 
 # data_dir = "c:\source/tensorflow-image-classification-framework/mnist"
 # files = glob.glob(os.path.join(data_dir, "*_validation_*tfrecord"))

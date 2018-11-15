@@ -140,3 +140,64 @@ def model_fn(features, labels, mode, params):
         train_op = optimizer.minimize(loss, global_step=global_step)
 
     return tf.estimator.EstimatorSpec(mode, loss=loss, train_op=train_op)
+
+
+def build_model(features, labels, cf, is_training=True):
+    images = features
+
+    # -----------------------------------------------------------
+    # MODEL: define the layers of the model
+    with tf.variable_scope('model'):
+        # Compute the embeddings with the model
+        if cf.model_name == "base_model":
+            embeddings = build_model(is_training, images, cf)
+        else:
+            embeddings = build_slim_model(is_training, images, cf)
+    embedding_mean_norm = tf.reduce_mean(tf.norm(embeddings, axis=1))
+
+    tf.summary.scalar("embedding_mean_norm", embedding_mean_norm)
+
+    if not is_training:
+        return embeddings
+
+    labels = tf.cast(labels, tf.int64)
+
+    # Define triplet loss
+    if cf.triplet_strategy == "batch_all":
+        loss, fraction = batch_all_triplet_loss(labels, embeddings, margin=cf.margin,
+                                                squared=cf.squared)
+    elif cf.triplet_strategy == "batch_hard":
+        loss = batch_hard_triplet_loss(labels, embeddings, margin=cf.margin,
+                                       squared=cf.squared)
+    else:
+        raise ValueError("Triplet strategy not recognized: {}".format(cf.triplet_strategy))
+
+    # -----------------------------------------------------------
+    # METRICS AND SUMMARIES
+    # Metrics for evaluation using tf.metrics (average over whole dataset)
+    # TODO: some other metrics like rank-1 accuracy?
+    with tf.variable_scope("metrics"):
+        eval_metric_ops = {"embedding_mean_norm": tf.metrics.mean(embedding_mean_norm)}
+
+        if cf.triplet_strategy == "batch_all":
+            eval_metric_ops['fraction_positive_triplets'] = tf.metrics.mean(fraction)
+
+    # Summaries for training
+    tf.summary.scalar('loss', loss)
+    if cf.triplet_strategy == "batch_all":
+        tf.summary.scalar('fraction_positive_triplets', fraction)
+
+    tf.summary.image('train_image', images, max_outputs=1)
+
+    # Define training step that minimizes the loss with the Adam optimizer
+    optimizer = tf.train.AdamOptimizer(cf.learning_rate, cf.adam_beta1, cf.adam_beta2,
+                                       epsilon=cf.opt_epsilon)
+    global_step = tf.train.get_global_step()
+    if cf.use_batch_norm:
+        # Add a dependency to update the moving mean and variance for batch normalization
+        with tf.control_dependencies(tf.get_collection(tf.GraphKeys.UPDATE_OPS)):
+            train_op = optimizer.minimize(loss, global_step=global_step)
+    else:
+        train_op = optimizer.minimize(loss, global_step=global_step)
+
+    return loss, train_op

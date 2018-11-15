@@ -2,16 +2,21 @@ import os
 import util
 import tensorflow as tf
 from tensorflow.python.client import device_lib
-from core import model_fn
+from model import model_fn
 import glob
-import dataset
-import numpy as np
+import util
 
 
 def main(cf):
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
     os.environ["CUDA_VISIBLE_DEVICES"] = F.gpu_no
     print("CUDA Visible device", device_lib.list_local_devices())
+    # inputs_ph = tf.placeholder(tf.float32, [None, cf.input_size, cf.input_size, cf.input_channel],
+    #                            name="inputs")
+    # labels_ph = tf.placeholder(tf.int32, [None], name="labels")
+    images_ph = tf.placeholder(tf.float32, [None, cf.input_size, cf.input_size, cf.input_channel], name="inputs")
+    labels_ph = tf.placeholder(tf.int32, [None], name="labels")
+    loss_op, train_op = model_fn.build_model(images_ph, labels_ph, cf, True)
 
     def train_pre_process(example_proto):
         features = {"image/encoded": tf.FixedLenFeature((), tf.string, default_value=""),
@@ -21,12 +26,13 @@ def main(cf):
                     }
 
         parsed_features = tf.parse_single_example(example_proto, features)
-
+        image = parsed_features["image/encoded"]
         image = tf.image.decode_jpeg(parsed_features["image/encoded"], 3)
         image = tf.cast(image, tf.float32)
 
         image = tf.expand_dims(image, 0)
-        image = tf.image.resize_bilinear(image, [224, 224], align_corners=False)
+        image = tf.image.resize_image_with_pad(image, 224, 224)
+        # image = tf.image.resize_bilinear(image, [224, 224], align_corners=False)
         image = tf.squeeze(image, [0])
 
         image = tf.divide(image, 255.0)
@@ -37,125 +43,130 @@ def main(cf):
 
         return image, label
 
-    files = glob.glob(os.path.join(cf.data_dir, "*_train_*tfrecord"))
+    files = glob.glob(os.path.join(cf.data_dir, "*_train*tfrecord"))
     files.sort()
     assert len(files) > 0
+    num_examples = util.count_records(files)
     dataset = tf.data.TFRecordDataset(files)
     dataset = dataset.map(train_pre_process)
     dataset = dataset.shuffle(cf.shuffle_buffer_size)  # whole dataset into the buffer
-    dataset = dataset.repeat(cf.num_epochs)
+    dataset = dataset.repeat()
     dataset = dataset.batch(cf.sampling_buffer_size)
     dataset = dataset.prefetch(cf.prefetch_buffer_size)
 
-    iterator = dataset.make_initializable_iterator()
+    iterator = dataset.make_one_shot_iterator()
     images, labels = iterator.get_next()
 
     tf_config = tf.ConfigProto()
     tf_config.gpu_options.allow_growth = True
     sess = tf.Session(config=tf_config)
-    remain_images = None
-    remain_labels = None
-    import time
-    for epoch in range(cf.num_epochs):
-        step = 0
-        sess.run(iterator.initializer)
-        while True:
-            try:
-                start = time.time()
-                tmp_images, tmp_labels = sess.run([images, labels])
-                print("get data", time.time() - start)
-                pair_indices = set()
-                label_buffer = {}
-                start = time.time()
-                for i, tmp_label in enumerate(tmp_labels):
-                    if tmp_label in label_buffer:
-                        pair_indices.add(i)
-                        pair_indices.add(label_buffer[tmp_label])
-                    else:
-                        label_buffer[tmp_label] = i
-                print("find pairs", time.time() - start)
-                print(len(pair_indices))
-                step += 1
-                if (step == 20):
-                    sys.exit()
-                # if len(pair_indices) > cf.batch_size:
-                #     pair_indices = pair_indices[:cf.batch_size]
-                #     remain_pair_indices = pair_indices[cf.batch_size:]
-                # else:
-                #
-                #
-                # pair_labels = tmp_labels[list(pair_indices)]
-                #
-                # print(sorted_by_value)
-                # sys.exit()
-            except tf.errors.OutOfRangeError:
+    sess.run(tf.global_variables_initializer())
+    epoch = 1
+    steps = 1
+    num_trained_images = 0
+    while True:
+        # sess.run(iterator.initializer)
+        try:
+            tmp_images, tmp_labels = sess.run([images, labels])
+            pair_indices = set()
+            single_index_map = {}
+            label_buffer = {}
+            for i, tmp_label in enumerate(tmp_labels):
+                if tmp_label in label_buffer:
+                    pair_indices.add(i)
+                    pair_indices.add(label_buffer[tmp_label])
+                    if tmp_label in single_index_map:
+                        del single_index_map[tmp_label]
+                else:
+                    label_buffer[tmp_label] = i
+                    single_index_map[tmp_label] = i
+            pair_indices = list(pair_indices)
+            if len(pair_indices) > cf.batch_size:
+                pair_indices = pair_indices[:cf.batch_size]
+            elif len(pair_indices) < cf.batch_size:
+                pair_indices += list(single_index_map.values())[:cf.batch_size - len(pair_indices)]
+
+            batch_images = tmp_images[pair_indices]
+            batch_labels = tmp_labels[pair_indices]
+            tmp_images = None
+            tmp_labels = None
+            loss, _ = sess.run([loss_op, train_op], feed_dict={images_ph: batch_images, labels_ph: batch_labels})
+            print("[%d epoch, %d steps] %f" % (epoch, steps, loss))
+            steps += 1
+            num_trained_images += cf.batch_size
+            if num_trained_images >= num_examples:
+                epoch += 1
+                num_trained_images = 0
+            if epoch >= cf.num_epochs:
                 break
-
-    ds_list = []
-    label_map_list = []
-    label_cnt_list = []
-    dataset_list = cf.train_file_patterns.split("|")
-    for i, path_pattern in enumerate(dataset_list):
-        tfrecord_files = glob.glob(path_pattern)
-        assert len(tfrecord_files) > 0
-        ds = dataset.build_dataset(tfrecord_files, cf.preprocessing_name, cf.shuffle_buffer_size,
-                                   cf.sampling_buffer_size, cf.num_map_parallel)
-        ds_list.append(ds)
-        label_map_list.append(util.create_label_map(tfrecord_files))
-        label_cnt_list.append(len(label_map_list[i]))
-        if i > 0:
-            assert label_cnt_list[i] == label_cnt_list[i - 1]
-            assert label_map_list[i] == label_map_list[i - 1]
-
-    inputs_ph = tf.placeholder(tf.float32, [None, cf.input_size, cf.input_size, cf.input_channel],
-                               name="inputs")
-    labels_ph = tf.placeholder(tf.int32, [None], name="labels")
-
-    model_fn.build_model(inputs_ph, labels=labels_ph, mode=tf.estimator.ModeKeys.TRAIN)
-
-    assert cf.model_name is not None
-    assert os.path.isfile(os.path.join("./models", cf.model_name + ".py"))
-    model_f = util.get_attr('models.%s' % cf.model_name, "build_model")
-
-    data_list = model_f(inputs_ph, cf.embedding_size)
-
-    assert cf.sampling_name is not None
-    assert os.path.isfile(os.path.join("./samplings", cf.sampling_name + ".py"))
-    sampling_f = util.get_attr('samplings.%s' % cf.sampling_name, "samplings")
-    data_list = sampling_f()
-
-    sys.exit()
-
-    ds = dataset.build_dataset(tfrecord_files, cf.preprocessing_name, cf.shuffle_buffer_size,
-                               cf.sampling_buffer_size, cf.num_map_parallel)
-
-    index_iterator = ds.make_initializable_iterator()
-
-    img, index_labels = index_iterator.get_next()
-
-    tf_config = tf.ConfigProto()
-    tf_config.gpu_options.allow_growth = True
-    sess = tf.Session()
-    from PIL import Image
-
-    for i in range(2):
-        sess.run(index_iterator.initializer)
-        j = 0
-        while True:
-            try:
-                images, ll = sess.run([img, index_labels])
-                print(ll)
-                im = Image.fromarray(images[0].astype('uint8'))
-                im.show()
-                # if j == 0:
-                # im.save("%d.jpg" % i)
-                break
-                # j += 1
-                # if i == 1:
-                #     break
-            except tf.errors.OutOfRangeError:
-                break
-    sys.exit()
+        except tf.errors.OutOfRangeError:
+            break
+    #
+    # ds_list = []
+    # label_map_list = []
+    # label_cnt_list = []
+    # dataset_list = cf.train_file_patterns.split("|")
+    # for i, path_pattern in enumerate(dataset_list):
+    #     tfrecord_files = glob.glob(path_pattern)
+    #     assert len(tfrecord_files) > 0
+    #     ds = dataset.build_dataset(tfrecord_files, cf.preprocessing_name, cf.shuffle_buffer_size,
+    #                                cf.sampling_buffer_size, cf.num_map_parallel)
+    #     ds_list.append(ds)
+    #     label_map_list.append(util.create_label_map(tfrecord_files))
+    #     label_cnt_list.append(len(label_map_list[i]))
+    #     if i > 0:
+    #         assert label_cnt_list[i] == label_cnt_list[i - 1]
+    #         assert label_map_list[i] == label_map_list[i - 1]
+    #
+    # inputs_ph = tf.placeholder(tf.float32, [None, cf.input_size, cf.input_size, cf.input_channel],
+    #                            name="inputs")
+    # labels_ph = tf.placeholder(tf.int32, [None], name="labels")
+    #
+    # model_fn.build_model(inputs_ph, labels=labels_ph, mode=tf.estimator.ModeKeys.TRAIN)
+    #
+    # assert cf.model_name is not None
+    # assert os.path.isfile(os.path.join("./models", cf.model_name + ".py"))
+    # model_f = util.get_attr('models.%s' % cf.model_name, "build_model")
+    #
+    # data_list = model_f(inputs_ph, cf.embedding_size)
+    #
+    # assert cf.sampling_name is not None
+    # assert os.path.isfile(os.path.join("./samplings", cf.sampling_name + ".py"))
+    # sampling_f = util.get_attr('samplings.%s' % cf.sampling_name, "samplings")
+    # data_list = sampling_f()
+    #
+    # sys.exit()
+    #
+    # ds = dataset.build_dataset(tfrecord_files, cf.preprocessing_name, cf.shuffle_buffer_size,
+    #                            cf.sampling_buffer_size, cf.num_map_parallel)
+    #
+    # index_iterator = ds.make_initializable_iterator()
+    #
+    # img, index_labels = index_iterator.get_next()
+    #
+    # tf_config = tf.ConfigProto()
+    # tf_config.gpu_options.allow_growth = True
+    # sess = tf.Session()
+    # from PIL import Image
+    #
+    # for i in range(2):
+    #     sess.run(index_iterator.initializer)
+    #     j = 0
+    #     while True:
+    #         try:
+    #             images, ll = sess.run([img, index_labels])
+    #             print(ll)
+    #             im = Image.fromarray(images[0].astype('uint8'))
+    #             im.show()
+    #             # if j == 0:
+    #             # im.save("%d.jpg" % i)
+    #             break
+    #             # j += 1
+    #             # if i == 1:
+    #             #     break
+    #         except tf.errors.OutOfRangeError:
+    #             break
+    # sys.exit()
 
 
 def train():
@@ -165,7 +176,7 @@ def train():
 if __name__ == '__main__':
     fl = tf.app.flags
 
-    fl.DEFINE_string('data_dir', 'D:/data/fashion/image_retrieval/cafe24product/tfrecord', '')
+    fl.DEFINE_string('data_dir', 'D:\data\\fashion\image_retrieval\cafe24product\\tfrecord', '')
     fl.DEFINE_string('sampling_name', 'pk', 'pk, random...')
     fl.DEFINE_string('model_name', 'alexnet_v2', '')
     fl.DEFINE_integer('num_epochs', 10, '')
@@ -175,8 +186,12 @@ if __name__ == '__main__':
     fl.DEFINE_string('preprocessing_name', 'default_preprocessing', '')
     fl.DEFINE_integer('sampling_buffer_size', 2048, '')
     fl.DEFINE_integer('shuffle_buffer_size', 1000, '')
-    fl.DEFINE_integer('prefetch_buffer_size', 1024, '')
+    fl.DEFINE_integer('prefetch_buffer_size', 2048, '')
     fl.DEFINE_string('save_dir', 'experiments/base_model', '')
+    fl.DEFINE_string('triplet_strategy', 'batch_all', '')
+    fl.DEFINE_float('margin', 0.5, '')
+    fl.DEFINE_boolean('squared', False, '')
+    fl.DEFINE_boolean('use_batch_norm', False, '')
     fl.DEFINE_string('data_mid_name', 'val', '')
     fl.DEFINE_integer('save_steps', 10000, '')
     fl.DEFINE_integer('save_epochs', 1, '')
