@@ -104,6 +104,7 @@ def main(cf):
             tmp_images = None
             tmp_labels = None
             start = time.time()
+            print(batch_labels)
             loss, _ = sess.run([loss_op, train_op], feed_dict={images_ph: batch_images, labels_ph: batch_labels})
             train_time = time.time() - start
             print("[%d epoch(%d/%d), %d steps] sampling time: %f, train time: %f, loss: %f" % (
@@ -112,7 +113,8 @@ def main(cf):
             num_trained_images += cf.batch_size
 
             if num_trained_images >= num_examples:
-                saver.save(sess, cf.save_dir + "/model.ckpt", epoch)
+                if epoch % cf.save_epochs == 0:
+                    saver.save(sess, cf.save_dir + "/model.ckpt", epoch)
                 epoch += 1
                 num_trained_images = 0
             if epoch >= cf.num_epochs:
@@ -205,7 +207,7 @@ if __name__ == '__main__':
     fl.DEFINE_integer('sampling_buffer_size', 2048, '')
     fl.DEFINE_integer('shuffle_buffer_size', 1000, '')
     fl.DEFINE_integer('prefetch_buffer_size', 2048, '')
-    fl.DEFINE_string('save_dir', 'experiments/base_model', '')
+    fl.DEFINE_string('save_dir', 'experiments/test', '')
     fl.DEFINE_string('triplet_strategy', 'batch_all', '')
     fl.DEFINE_float('margin', 0.5, '')
     fl.DEFINE_boolean('squared', False, '')
@@ -239,7 +241,7 @@ if __name__ == '__main__':
     # Learning Rate Flags #
     #######################
     fl.DEFINE_string('learning_rate_decay_type', 'exponential', '"fixed", "exponential",'' or "polynomial"')
-    fl.DEFINE_float('learning_rate', 0.01, 'Initial learning rate.')
+    fl.DEFINE_float('learning_rate', 0.001, 'Initial learning rate.')
     fl.DEFINE_float('end_learning_rate', 0.0001, 'The minimal end learning rate used by a polynomial decay.')
     fl.DEFINE_float('label_smoothing', 0.0, 'The amount of label smoothing.')
     fl.DEFINE_float('learning_rate_decay_factor', 0.94, 'Learning rate decay factor.')
