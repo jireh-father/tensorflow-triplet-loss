@@ -57,8 +57,8 @@ if __name__ == '__main__':
         return image, parsed_features["image/class/label"]
 
 
-    files_op = tf.placeholder(tf.string, shape=[None])
-    num_examples_op = tf.placeholder(tf.int64, shape=())
+    files_op = tf.placeholder(tf.string, shape=[None], name="files")
+    num_examples_op = tf.placeholder(tf.int64, shape=(), name="num_exampls")
     dataset = tf.data.TFRecordDataset(files_op)
     dataset = dataset.map(train_pre_process)
     dataset = dataset.batch(num_examples_op)
