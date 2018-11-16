@@ -91,8 +91,8 @@ if __name__ == '__main__':
     steps = query_num_examples / embedding_batch_size
     if query_num_examples % embedding_batch_size > 0:
         steps += 1
+    sess.run(iterator.initializer, feed_dict={files_op: query_files, num_examples_op: query_num_examples})
     for i in range(steps):
-        sess.run(iterator.initializer, feed_dict={files_op: query_files, num_examples_op: query_num_examples})
         tmp_query_embeddings = sess.run(embedding_op)
         print(tmp_query_embeddings.shape)
         for j, tmp_qe in enumerate(tmp_query_embeddings):
