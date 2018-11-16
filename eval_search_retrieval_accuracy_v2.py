@@ -31,91 +31,90 @@ parser.add_argument('--embedding_size', default=128,
 parser.add_argument('--model_name', default="tfrecord",
                     help="Directory containing the dataset")
 if __name__ == '__main__':
-    g = tf.Graph()
-    with g.as_default():
-        tf.logging.set_verbosity(tf.logging.INFO)
+    tf.logging.set_verbosity(tf.logging.INFO)
 
-        # Load the parameters from json file
-        args = parser.parse_args()
-        json_path = os.path.join(args.model_dir, 'params.json')
-        assert os.path.isfile(json_path), "No json configuration file found at {}".format(json_path)
-        params = Params(json_path)
+    # Load the parameters from json file
+    args = parser.parse_args()
+    json_path = os.path.join(args.model_dir, 'params.json')
+    assert os.path.isfile(json_path), "No json configuration file found at {}".format(json_path)
+    params = Params(json_path)
 
 
-        def train_pre_process(example_proto):
-            features = {"image/encoded": tf.FixedLenFeature((), tf.string, default_value=""),
-                        "image/class/label": tf.FixedLenFeature((), tf.int64, default_value=0)}
-            parsed_features = tf.parse_single_example(example_proto, features)
-            image = tf.image.decode_jpeg(parsed_features["image/encoded"], 3)
-            image = tf.cast(image, tf.float32)
-            image = tf.expand_dims(image, 0)
-            image = tf.image.resize_image_with_pad(image, 224, 224)
-            image = tf.squeeze(image, [0])
-            image = tf.divide(image, 255.0)
-            image = tf.subtract(image, 0.5)
-            image = tf.multiply(image, 2.0)
-            return image, parsed_features["image/class/label"]
+    def train_pre_process(example_proto):
+        features = {"image/encoded": tf.FixedLenFeature((), tf.string, default_value=""),
+                    "image/class/label": tf.FixedLenFeature((), tf.int64, default_value=0)}
+        parsed_features = tf.parse_single_example(example_proto, features)
+        image = tf.image.decode_jpeg(parsed_features["image/encoded"], 3)
+        image = tf.cast(image, tf.float32)
+        image = tf.expand_dims(image, 0)
+        image = tf.image.resize_image_with_pad(image, 224, 224)
+        image = tf.squeeze(image, [0])
+        image = tf.divide(image, 255.0)
+        image = tf.subtract(image, 0.5)
+        image = tf.multiply(image, 2.0)
+        return image, parsed_features["image/class/label"]
 
 
-        files_op = tf.placeholder(tf.string, shape=[None], name="files")
-        num_examples_op = tf.placeholder(tf.int64, shape=(), name="num_examples")
-        dataset = tf.data.TFRecordDataset(files_op)
-        dataset = dataset.map(train_pre_process)
-        dataset = dataset.batch(num_examples_op)
-        iterator = dataset.make_initializable_iterator()
-        images, labels = iterator.get_next()
+    files_op = tf.placeholder(tf.string, shape=[None], name="files")
+    num_examples_op = tf.placeholder(tf.int64, shape=(), name="num_examples")
+    dataset = tf.data.TFRecordDataset(files_op)
+    dataset = dataset.map(train_pre_process)
+    dataset = dataset.batch(num_examples_op)
+    iterator = dataset.make_initializable_iterator()
+    images, labels = iterator.get_next()
 
-        embedding_op = model_fn.build_model(images, None, args, False)
+    embedding_op = model_fn.build_model(images, None, args, False)
 
-        query_files = glob.glob(os.path.join(args.data_dir, "*_query*tfrecord"))
-        query_files.sort()
-        assert len(query_files) > 0
-        query_num_examples = util.count_records(query_files)
-        index_files = glob.glob(os.path.join(args.data_dir, "*_index*tfrecord"))
-        index_files.sort()
-        assert len(index_files) > 0
-        index_num_examples = util.count_records(index_files)
+    query_files = glob.glob(os.path.join(args.data_dir, "*_query*tfrecord"))
+    query_files.sort()
+    assert len(query_files) > 0
+    query_num_examples = util.count_records(query_files)
+    index_files = glob.glob(os.path.join(args.data_dir, "*_index*tfrecord"))
+    index_files.sort()
+    assert len(index_files) > 0
+    index_num_examples = util.count_records(index_files)
 
-        embedding_batch_size = 512
+    embedding_batch_size = 512
 
-        tf_config = tf.ConfigProto()
-        tf_config.gpu_options.allow_growth = True
-        sess = tf.Session(config=tf_config)
-        sess.run(tf.global_variables_initializer())
-        saver = tf.train.Saver(tf.global_variables())
-        saver.restore(sess, tf.train.latest_checkpoint(args.model_dir))
+    tf_config = tf.ConfigProto()
+    tf_config.gpu_options.allow_growth = True
+    sess = tf.Session(config=tf_config)
+    sess.run(tf.global_variables_initializer())
+    saver = tf.train.Saver(tf.global_variables())
+    saver.restore(sess, tf.train.latest_checkpoint(args.model_dir))
 
-        sess.run(iterator.initializer, feed_dict={files_op: query_files, num_examples_op: query_num_examples})
-        query_labels = sess.run(labels)
-        print("query labels", query_labels.shape)
-        query_embeddings = np.zeros((query_num_examples, int(args.embedding_size)))
-        steps = query_num_examples / embedding_batch_size
-        if query_num_examples % embedding_batch_size > 0:
-            steps += 1
-        sess.run(iterator.initializer, feed_dict={files_op: query_files, num_examples_op: embedding_batch_size})
-        for i in range(steps):
-            tmp_query_embeddings = sess.run(embedding_op)
-            print("query embeddings", tmp_query_embeddings.shape)
-            for j, tmp_qe in enumerate(tmp_query_embeddings):
-                query_embeddings[i * embedding_batch_size + j] = tmp_qe
-        print(query_embeddings.shape)
+    sess.run(iterator.initializer, feed_dict={files_op: query_files, num_examples_op: query_num_examples})
+    query_labels = sess.run(labels)
+    print("query labels", query_labels.shape)
+    query_embeddings = np.zeros((query_num_examples, int(args.embedding_size)))
+    steps = query_num_examples / embedding_batch_size
+    if query_num_examples % embedding_batch_size > 0:
+        steps += 1
+    sess.run(iterator.initializer, feed_dict={files_op: query_files, num_examples_op: embedding_batch_size})
+    for i in range(steps):
+        tmp_query_embeddings = sess.run(embedding_op)
+        print("query embeddings", tmp_query_embeddings.shape)
+        for j, tmp_qe in enumerate(tmp_query_embeddings):
+            query_embeddings[i * embedding_batch_size + j] = tmp_qe
+    print(query_embeddings.shape)
 
-        sess.run(iterator.initializer, feed_dict={files_op: index_files, num_examples_op: index_num_examples})
-        index_labels = sess.run(labels)
-        print("index labels", index_labels.shape)
-        index_embeddings = np.zeros((index_num_examples, int(args.embedding_size)))
-        steps = index_num_examples / embedding_batch_size
-        if index_num_examples % embedding_batch_size > 0:
-            steps += 1
-        sess.run(iterator.initializer, feed_dict={files_op: index_files, num_examples_op: embedding_batch_size})
-        for i in range(steps):
-            tmp_index_embeddings = sess.run(embedding_op)
-            print("index embeddings", tmp_index_embeddings.shape)
-            for j, tmp_ie in enumerate(tmp_index_embeddings):
-                index_embeddings[i * embedding_batch_size + j] = tmp_ie
-        print(index_embeddings.shape)
-        sess.close()
-        tf.reset_default_graph()
+    sess.run(iterator.initializer, feed_dict={files_op: index_files, num_examples_op: index_num_examples})
+    index_labels = sess.run(labels)
+    print("index labels", index_labels.shape)
+    index_embeddings = np.zeros((index_num_examples, int(args.embedding_size)))
+    steps = index_num_examples / embedding_batch_size
+    if index_num_examples % embedding_batch_size > 0:
+        steps += 1
+    sess.run(iterator.initializer, feed_dict={files_op: index_files, num_examples_op: embedding_batch_size})
+    for i in range(steps):
+        tmp_index_embeddings = sess.run(embedding_op)
+        print("index embeddings", tmp_index_embeddings.shape)
+        for j, tmp_ie in enumerate(tmp_index_embeddings):
+            index_embeddings[i * embedding_batch_size + j] = tmp_ie
+    print(index_embeddings.shape)
+
+    sess.close()
+    tf.reset_default_graph()
 
     if args.save != "0":
         np.save(os.path.join(args.model_dir, "query_embeddings.npy"), query_embeddings)
