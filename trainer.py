@@ -110,6 +110,8 @@ def main(cf):
                 epoch, steps % steps_each_epoch, steps_each_epoch, steps, sampling_time, train_time, loss))
             steps += 1
             num_trained_images += cf.batch_size
+
+            saver.save(sess, cf.save_dir + "/model.ckpt", steps)
             if num_trained_images >= num_examples:
                 saver.save(sess, cf.save_dir + "/model.ckpt", epoch)
                 epoch += 1
@@ -212,7 +214,7 @@ if __name__ == '__main__':
     fl.DEFINE_string('data_mid_name', 'val', '')
     fl.DEFINE_integer('save_steps', 10000, '')
     fl.DEFINE_integer('save_epochs', 1, '')
-    fl.DEFINE_integer('keep_checkpoint_max', 20, '')
+    fl.DEFINE_integer('keep_checkpoint_max', 2, '')
     fl.DEFINE_integer('batch_size', 128, '')
     fl.DEFINE_integer('num_image_sampling', 4, '')
     fl.DEFINE_integer('num_single_image_max', 4, '')

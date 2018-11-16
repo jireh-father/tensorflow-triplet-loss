@@ -82,8 +82,10 @@ def copy_files(df_tmp, image_dir, output_parent_dir):
         item_id = row["item_id"]
         # consumer = row["image_pair_name_1"]
         # shop = row["image_pair_name_2"]
-        consumer = "img_highres" + "/" + ("/".join(row["image_pair_name_1"].split("/")[1:]))
-        shop = "img_highres" + "/" + ("/".join(row["image_pair_name_2"].split("/")[1:]))
+        # consumer = "img_highres" + "/" + ("/".join(row["image_pair_name_1"].split("/")[1:]))
+        # shop = "img_highres" + "/" + ("/".join(row["image_pair_name_2"].split("/")[1:]))
+        consumer = "img" + "/" + ("/".join(row["image_pair_name_1"].split("/")[1:]))
+        shop = "img" + "/" + ("/".join(row["image_pair_name_2"].split("/")[1:]))
         output_dir_query = os.path.join(output_parent_dir + "_query", item_id)
         output_dir_index = os.path.join(output_parent_dir + "_index", item_id)
         if not os.path.isdir(output_dir_query):
@@ -100,13 +102,13 @@ def copy_files(df_tmp, image_dir, output_parent_dir):
 
 
 image_dir = "D:/data/fashion/image_retrieval/deep_fashion/consumer-to-shop/Img"
-# df_tmp = df[df.evaluation_status == "train"]
-# output_parent_dir = image_dir + "_train"
-# copy_files_for_train(df_tmp, image_dir, output_parent_dir)
-
 df_tmp = df[df.evaluation_status == "train"]
 output_parent_dir = image_dir + "_train"
-copy_files(df_tmp, image_dir, output_parent_dir)
+copy_files_for_train(df_tmp, image_dir, output_parent_dir)
+
+# df_tmp = df[df.evaluation_status == "train"]
+# output_parent_dir = image_dir + "_train"
+# copy_files(df_tmp, image_dir, output_parent_dir)
 
 df_tmp = df[df.evaluation_status == "val"]
 output_parent_dir = image_dir + "_val"
