@@ -45,7 +45,6 @@ if __name__ == '__main__':
         features = {"image/encoded": tf.FixedLenFeature((), tf.string, default_value=""),
                     "image/class/label": tf.FixedLenFeature((), tf.int64, default_value=0)}
         parsed_features = tf.parse_single_example(example_proto, features)
-        image = parsed_features["image/encoded"]
         image = tf.image.decode_jpeg(parsed_features["image/encoded"], 3)
         image = tf.cast(image, tf.float32)
         image = tf.expand_dims(image, 0)
