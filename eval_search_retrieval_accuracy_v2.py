@@ -86,6 +86,7 @@ if __name__ == '__main__':
     saver.restore(sess, tf.train.latest_checkpoint(args.model_dir))
     sess.run(iterator.initializer, feed_dict={files_op: query_files, num_examples_op: query_num_examples})
     query_labels = sess.run(labels)
+    print("query labels", query_labels.shape)
     query_embeddings = np.zeros((query_num_examples, int(args.embedding_size)))
 
     steps = query_num_examples / embedding_batch_size
@@ -94,7 +95,7 @@ if __name__ == '__main__':
     sess.run(iterator.initializer, feed_dict={files_op: query_files, num_examples_op: query_num_examples})
     for i in range(steps):
         tmp_query_embeddings = sess.run(embedding_op)
-        print(tmp_query_embeddings.shape)
+        print("query embeddings", tmp_query_embeddings.shape)
         for j, tmp_qe in enumerate(tmp_query_embeddings):
             query_embeddings[i * embedding_batch_size + j] = tmp_qe
     print(query_embeddings.shape)
