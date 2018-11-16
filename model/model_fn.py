@@ -55,7 +55,7 @@ def build_slim_model(is_training, images, params):
         output: (tf.Tensor) output of the model
     """
     weight_decay = 0.
-    model_f = nets_factory.get_network_fn(params.model_name, params.embedding_size, weight_decay,
+    model_f = nets_factory.get_network_fn(params.model_name, int(params.embedding_size), weight_decay,
                                           is_training=is_training)
     out, _ = model_f(images)
 
