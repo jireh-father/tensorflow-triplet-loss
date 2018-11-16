@@ -58,11 +58,11 @@ if __name__ == '__main__':
 
 
     files_op = tf.placeholder(tf.string, shape=[None], name="files")
-    num_examples_op = tf.placeholder(tf.int64, shape=(), name="num_exampls")
+    num_examples_op = tf.placeholder(tf.int64, shape=(), name="num_examples")
     dataset = tf.data.TFRecordDataset(files_op)
     dataset = dataset.map(train_pre_process)
     dataset = dataset.batch(num_examples_op)
-    iterator = dataset.make_one_shot_iterator()
+    iterator = dataset.make_initializable_iterator()
     images, labels = iterator.get_next()
 
     embedding_op = model_fn.build_model(images, None, args, False)
@@ -82,11 +82,10 @@ if __name__ == '__main__':
     sess.run(tf.global_variables_initializer())
     saver = tf.train.Saver(tf.global_variables())
     saver.restore(sess, tf.train.latest_checkpoint(args.model_dir))
-
-    query_labels, query_embeddings = sess.run([labels, embedding_op], feed_dict={files_op: query_files,
-                                                                                 num_examples_op: query_num_examples})
-    index_labels, index_embeddings = sess.run([labels, embedding_op], feed_dict={files_op: index_files,
-                                                                                 num_examples_op: index_num_examples})
+    sess.run(iterator.initializer, feed_dict={files_op: query_files, num_examples_op: query_num_examples})
+    query_labels, query_embeddings = sess.run([labels, embedding_op])
+    sess.run(iterator.initializer, feed_dict={files_op: index_files, num_examples_op: index_num_examples})
+    index_labels, index_embeddings = sess.run([labels, embedding_op])
     sess.close()
     tf.reset_default_graph()
     print("index_labels", index_labels.shape)
