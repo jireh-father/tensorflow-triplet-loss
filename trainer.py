@@ -111,7 +111,6 @@ def main(cf):
             steps += 1
             num_trained_images += cf.batch_size
 
-            saver.save(sess, cf.save_dir + "/model.ckpt", steps)
             if num_trained_images >= num_examples:
                 saver.save(sess, cf.save_dir + "/model.ckpt", epoch)
                 epoch += 1
