@@ -76,6 +76,8 @@ if __name__ == '__main__':
     assert len(index_files) > 0
     index_num_examples = util.count_records(index_files)
 
+    embedding_batch_size = 1024
+
     tf_config = tf.ConfigProto()
     tf_config.gpu_options.allow_growth = True
     sess = tf.Session(config=tf_config)
@@ -84,8 +86,20 @@ if __name__ == '__main__':
     saver.restore(sess, tf.train.latest_checkpoint(args.model_dir))
     sess.run(iterator.initializer, feed_dict={files_op: query_files, num_examples_op: query_num_examples})
     query_labels = sess.run(labels)
-    sess.run(iterator.initializer, feed_dict={files_op: query_files, num_examples_op: query_num_examples})
-    query_embeddings = sess.run(embedding_op)
+    query_embeddings = np.zeros((query_num_examples, args.embedding_size))
+
+    steps = query_num_examples / embedding_batch_size
+    if query_num_examples % embedding_batch_size > 0:
+        steps += 1
+    for i in range(steps):
+        sess.run(iterator.initializer, feed_dict={files_op: query_files, num_examples_op: query_num_examples})
+        tmp_query_embeddings = sess.run(embedding_op)
+        print(tmp_query_embeddings.shape)
+        for j, tmp_qe in enumerate(tmp_query_embeddings):
+            query_embeddings[i * embedding_batch_size + j] = tmp_qe
+    print(query_embeddings.shape)
+    sys.exit()
+
     sess.run(iterator.initializer, feed_dict={files_op: index_files, num_examples_op: index_num_examples})
     index_labels = sess.run(labels)
     sess.run(iterator.initializer, feed_dict={files_op: index_files, num_examples_op: index_num_examples})
