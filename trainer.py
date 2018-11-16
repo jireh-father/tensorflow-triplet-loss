@@ -104,7 +104,6 @@ def main(cf):
             tmp_images = None
             tmp_labels = None
             start = time.time()
-            print(batch_labels)
             loss, _ = sess.run([loss_op, train_op], feed_dict={images_ph: batch_images, labels_ph: batch_labels})
             train_time = time.time() - start
             print("[%d epoch(%d/%d), %d steps] sampling time: %f, train time: %f, loss: %f" % (
