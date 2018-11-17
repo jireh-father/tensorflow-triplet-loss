@@ -69,11 +69,16 @@ def main(cf):
     sess.run(tf.global_variables_initializer())
 
     saver = tf.train.Saver(tf.global_variables(), max_to_keep=cf.keep_checkpoint_max)
-    if os.path.isdir(cf.save_dir):
-        saver.restore(sess, tf.train.latest_checkpoint(cf.save_dir))
-
     epoch = 1
     steps = 1
+    if os.path.isdir(cf.save_dir):
+        latest_checkpoint = tf.train.latest_checkpoint(cf.save_dir)
+        if latest_checkpoint is not None:
+            saver.restore(sess, tf.train.latest_checkpoint(cf.save_dir))
+            latest_epoch = int(latest_checkpoint.split("-")[1])
+            epoch = latest_epoch + 1
+            cf.num_epochs += latest_epoch
+
     num_trained_images = 0
     while True:
         # sess.run(iterator.initializer, feed_dict={seed_ph: steps})
@@ -108,9 +113,8 @@ def main(cf):
             train_time = time.time() - start
             print("[%d epoch(%d/%d), %d steps] sampling time: %f, train time: %f, loss: %f" % (
                 epoch, steps % steps_each_epoch, steps_each_epoch, steps, sampling_time, train_time, loss))
-            steps += 1
             num_trained_images += cf.batch_size
-
+            steps += 1
             if num_trained_images >= num_examples:
                 if epoch % cf.save_epochs == 0:
                     saver.save(sess, cf.save_dir + "/model.ckpt", epoch)
@@ -206,7 +210,7 @@ if __name__ == '__main__':
     fl.DEFINE_integer('sampling_buffer_size', 2048, '')
     fl.DEFINE_integer('shuffle_buffer_size', 1000, '')
     fl.DEFINE_integer('prefetch_buffer_size', 2048, '')
-    fl.DEFINE_string('save_dir', 'experiments/test', '')
+    fl.DEFINE_string('save_dir', 'experiments/base_model', '')
     fl.DEFINE_string('triplet_strategy', 'batch_all', '')
     fl.DEFINE_float('margin', 0.5, '')
     fl.DEFINE_boolean('squared', False, '')
@@ -214,7 +218,7 @@ if __name__ == '__main__':
     fl.DEFINE_string('data_mid_name', 'val', '')
     fl.DEFINE_integer('save_steps', 10000, '')
     fl.DEFINE_integer('save_epochs', 1, '')
-    fl.DEFINE_integer('keep_checkpoint_max', 2, '')
+    fl.DEFINE_integer('keep_checkpoint_max', 5, '')
     fl.DEFINE_integer('batch_size', 128, '')
     fl.DEFINE_integer('num_image_sampling', 4, '')
     fl.DEFINE_integer('num_single_image_max', 4, '')
