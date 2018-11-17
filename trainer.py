@@ -80,6 +80,7 @@ def main(cf):
             cf.num_epochs += latest_epoch
 
     num_trained_images = 0
+    last_saved_epoch = None
     while True:
         # sess.run(iterator.initializer, feed_dict={seed_ph: steps})
         try:
@@ -118,12 +119,15 @@ def main(cf):
             if num_trained_images >= num_examples:
                 if epoch % cf.save_epochs == 0:
                     saver.save(sess, cf.save_dir + "/model.ckpt", epoch)
+                    last_saved_epoch = epoch
                 epoch += 1
                 num_trained_images = 0
             if epoch >= cf.num_epochs:
                 break
         except tf.errors.OutOfRangeError:
             break
+    if last_saved_epoch < epoch:
+        saver.save(sess, cf.save_dir + "/model.ckpt", epoch)
     #
     # ds_list = []
     # label_map_list = []
