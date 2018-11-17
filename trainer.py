@@ -53,7 +53,7 @@ def main(cf):
     if num_examples % cf.batch_size > 0:
         steps_each_epoch += 1
     dataset = tf.data.TFRecordDataset(files)
-    dataset = dataset.map(train_pre_process)
+    dataset = dataset.map(train_pre_process, num_parallel_calls=cf.preprocessing_num_parallel)
     dataset = dataset.shuffle(cf.shuffle_buffer_size)
     dataset = dataset.repeat()
     dataset = dataset.batch(cf.sampling_buffer_size)
@@ -129,71 +129,6 @@ def main(cf):
     if last_saved_epoch < epoch:
         saver.save(sess, cf.save_dir + "/model.ckpt", epoch)
     #
-    # ds_list = []
-    # label_map_list = []
-    # label_cnt_list = []
-    # dataset_list = cf.train_file_patterns.split("|")
-    # for i, path_pattern in enumerate(dataset_list):
-    #     tfrecord_files = glob.glob(path_pattern)
-    #     assert len(tfrecord_files) > 0
-    #     ds = dataset.build_dataset(tfrecord_files, cf.preprocessing_name, cf.shuffle_buffer_size,
-    #                                cf.sampling_buffer_size, cf.num_map_parallel)
-    #     ds_list.append(ds)
-    #     label_map_list.append(util.create_label_map(tfrecord_files))
-    #     label_cnt_list.append(len(label_map_list[i]))
-    #     if i > 0:
-    #         assert label_cnt_list[i] == label_cnt_list[i - 1]
-    #         assert label_map_list[i] == label_map_list[i - 1]
-    #
-    # inputs_ph = tf.placeholder(tf.float32, [None, cf.input_size, cf.input_size, cf.input_channel],
-    #                            name="inputs")
-    # labels_ph = tf.placeholder(tf.int32, [None], name="labels")
-    #
-    # model_fn.build_model(inputs_ph, labels=labels_ph, mode=tf.estimator.ModeKeys.TRAIN)
-    #
-    # assert cf.model_name is not None
-    # assert os.path.isfile(os.path.join("./models", cf.model_name + ".py"))
-    # model_f = util.get_attr('models.%s' % cf.model_name, "build_model")
-    #
-    # data_list = model_f(inputs_ph, cf.embedding_size)
-    #
-    # assert cf.sampling_name is not None
-    # assert os.path.isfile(os.path.join("./samplings", cf.sampling_name + ".py"))
-    # sampling_f = util.get_attr('samplings.%s' % cf.sampling_name, "samplings")
-    # data_list = sampling_f()
-    #
-    # sys.exit()
-    #
-    # ds = dataset.build_dataset(tfrecord_files, cf.preprocessing_name, cf.shuffle_buffer_size,
-    #                            cf.sampling_buffer_size, cf.num_map_parallel)
-    #
-    # index_iterator = ds.make_initializable_iterator()
-    #
-    # img, index_labels = index_iterator.get_next()
-    #
-    # tf_config = tf.ConfigProto()
-    # tf_config.gpu_options.allow_growth = True
-    # sess = tf.Session()
-    # from PIL import Image
-    #
-    # for i in range(2):
-    #     sess.run(index_iterator.initializer)
-    #     j = 0
-    #     while True:
-    #         try:
-    #             images, ll = sess.run([img, index_labels])
-    #             print(ll)
-    #             im = Image.fromarray(images[0].astype('uint8'))
-    #             im.show()
-    #             # if j == 0:
-    #             # im.save("%d.jpg" % i)
-    #             break
-    #             # j += 1
-    #             # if i == 1:
-    #             #     break
-    #         except tf.errors.OutOfRangeError:
-    #             break
-    # sys.exit()
 
 
 def train():
@@ -211,9 +146,10 @@ if __name__ == '__main__':
     fl.DEFINE_integer('input_channel', 3, '')
     fl.DEFINE_integer('embedding_size', 128, '')
     fl.DEFINE_string('preprocessing_name', 'default_preprocessing', '')
-    fl.DEFINE_integer('sampling_buffer_size', 2048, '')
+    fl.DEFINE_integer('sampling_buffer_size', 1024, '')
     fl.DEFINE_integer('shuffle_buffer_size', 1000, '')
-    fl.DEFINE_integer('prefetch_buffer_size', 2048, '')
+    fl.DEFINE_integer('prefetch_buffer_size', 1024, '')
+    fl.DEFINE_integer('preprocessing_num_parallel', 4, '')
     fl.DEFINE_string('save_dir', 'experiments/base_model', '')
     fl.DEFINE_string('triplet_strategy', 'batch_all', '')
     fl.DEFINE_float('margin', 0.5, '')
@@ -223,7 +159,7 @@ if __name__ == '__main__':
     fl.DEFINE_integer('save_steps', 10000, '')
     fl.DEFINE_integer('save_epochs', 1, '')
     fl.DEFINE_integer('keep_checkpoint_max', 5, '')
-    fl.DEFINE_integer('batch_size', 128, '')
+    fl.DEFINE_integer('batch_size', 64, '')
     fl.DEFINE_integer('num_image_sampling', 4, '')
     fl.DEFINE_integer('num_single_image_max', 4, '')
 
