@@ -128,7 +128,8 @@ def main(cf):
             break
     if last_saved_epoch < epoch:
         saver.save(sess, cf.save_dir + "/model.ckpt", epoch)
-    #
+    if cf.shutdown_after_train:
+        os.system("sudo shutdown now")
 
 
 def train():
@@ -162,6 +163,7 @@ if __name__ == '__main__':
     fl.DEFINE_integer('batch_size', 64, '')
     fl.DEFINE_integer('num_image_sampling', 4, '')
     fl.DEFINE_integer('num_single_image_max', 4, '')
+    fl.DEFINE_boolean('shutdown_after_train', False, '')
 
     fl.DEFINE_integer('num_map_parallel', 4, '')
     fl.DEFINE_string('gpu_no', "0", '')
