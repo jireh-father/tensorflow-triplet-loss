@@ -122,7 +122,7 @@ def main(cf):
                     last_saved_epoch = epoch
                 epoch += 1
                 num_trained_images = 0
-            if epoch >= cf.num_epochs:
+            if epoch > cf.num_epochs:
                 break
         except tf.errors.OutOfRangeError:
             break
