@@ -120,10 +120,11 @@ def main(cf):
                 if epoch % cf.save_epochs == 0:
                     saver.save(sess, cf.save_dir + "/model.ckpt", epoch)
                     last_saved_epoch = epoch
+                if epoch >= cf.num_epochs:
+                    break
                 epoch += 1
                 num_trained_images = 0
-            if epoch > cf.num_epochs:
-                break
+
         except tf.errors.OutOfRangeError:
             break
     if last_saved_epoch < epoch:
