@@ -16,20 +16,17 @@ if __name__ == '__main__':
     result_files = glob.glob(os.path.join(result_path, "*_accuracies.json"))
     assert len(result_files) > 0
     legends = []
-    fig, ax = plt.subplots(figsize=(12, 12))
-    accuracies = json.load(open(result_files[0]))
-    index = np.arange(len(accuracies))
-    bar_width = 0.15
+    plt.figure(figsize=(8, 8))
     model_epochs = None
     if args.epoch_list is not None:
         model_epochs = [int(e) for e in args.epoch_list.split(",")]
-    for epoch, result_file in enumerate(result_files):
+    for result_file in result_files:
         i = int(os.path.basename(result_file).split("_")[0])
         if args.epoch_list is not None and i not in model_epochs:
             continue
         accuracies = json.load(open(result_file))
-        ax.bar(index+(epoch * bar_width), accuracies, bar_width, label="epoch_%d" % i)
-        # plt.plot(accuracies)
+        plt.plot(accuracies)
         legends.append("epoch %d" % i)
+
     plt.legend(legends, loc='upper left')
     plt.savefig("accuracy_graph.png")
