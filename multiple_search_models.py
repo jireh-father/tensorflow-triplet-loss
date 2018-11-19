@@ -20,12 +20,14 @@ if __name__ == '__main__':
                     glob.glob(os.path.join(args.model_dir, "model*.index"))]
     model_epochs.sort()
     for i in model_epochs:
-        os.system(
-            "python eval_retrieval_accuracy_v2.py --model_dir=%s --data_dir=%s --restore_epoch=%d --embedding_size=%d --model_name=%s" % (
-                args.model_dir, args.data_dir, i, int(args.embedding_size), args.model_name))
-        os.system(
-            "python search_faiss.py  --model_dir=%s --data_dir=%s --restore_epoch=%d --embedding_size=%d --max_top_k=%d" % (
-                args.model_dir, args.data_dir, i, int(args.embedding_size), int(args.max_top_k)))
+        eval_cmd = "python eval_retrieval_accuracy_v2.py --model_dir=%s --data_dir=%s --restore_epoch=%d --embedding_size=%d --model_name=%s" % (
+            args.model_dir, args.data_dir, i, int(args.embedding_size), args.model_name)
+        print(eval_cmd)
+        os.system(eval_cmd)
+        search_cmd = "python search_faiss.py  --model_dir=%s --data_dir=%s --restore_epoch=%d --embedding_size=%d --max_top_k=%d" % (
+            args.model_dir, args.data_dir, i, int(args.embedding_size), int(args.max_top_k))
+        print(search_cmd)
+        os.system(search_cmd)
 
     import matplotlib.pyplot as plt
     import matplotlib
