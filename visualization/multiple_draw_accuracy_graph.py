@@ -16,7 +16,7 @@ if __name__ == '__main__':
     result_files = glob.glob(os.path.join(result_path, "*.json"))
     legends = []
     for result_file in result_files:
-        i = int(result_file.split("_")[0])
+        i = int(os.path.basename(result_file).split("_")[0])
         accuracies = json.load(open(result_file))
         plt.plot(accuracies)
         legends.append("epoch %d" % i)
