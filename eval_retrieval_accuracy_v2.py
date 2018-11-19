@@ -22,9 +22,7 @@ parser.add_argument('--model_dir', default='experiments/alexnet',
                     help="Experiment directory containing params.json")
 parser.add_argument('--data_dir', default='D:\data\deep_fashion\In-shop Clothes Retrieval Benchmark\\tfrecord',
                     help="Directory containing the dataset")
-parser.add_argument('--save', default='0',
-                    help="Directory containing the dataset")
-parser.add_argument('--max_top_k', default=100,
+parser.add_argument('--restore_epoch', default=None,
                     help="Directory containing the dataset")
 parser.add_argument('--embedding_size', default=128,
                     help="Directory containing the dataset")
@@ -78,7 +76,14 @@ if __name__ == '__main__':
     sess = tf.Session(config=tf_config)
     sess.run(tf.global_variables_initializer())
     saver = tf.train.Saver(tf.global_variables())
-    saver.restore(sess, tf.train.latest_checkpoint(args.model_dir))
+
+    if args.restore_epoch is not None:
+        restore_epoch = int(args.restore_epoch)
+        latste_checkpoint = tf.train.latest_checkpoint(args.model_dir)
+        restore_path = os.path.join(os.path.dirname(latste_checkpoint), "model.ckpt-%d", restore_epoch)
+        saver.restore(sess, restore_path)
+    else:
+        saver.restore(sess, tf.train.latest_checkpoint(args.model_dir))
 
     sess.run(iterator.initializer, feed_dict={files_op: query_files, num_examples_op: query_num_examples})
     query_labels = sess.run(labels)
