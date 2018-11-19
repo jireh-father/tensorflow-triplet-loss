@@ -32,7 +32,6 @@ if __name__ == '__main__':
     import matplotlib.pyplot as plt
     import matplotlib
 
-    matplotlib.use('Agg')
     result_path = os.path.join(args.model_dir, "search_result")
     legends = []
     for i in model_epochs:
@@ -40,4 +39,6 @@ if __name__ == '__main__':
         plt.plot(accuracies)
         legends.append("epoch %d" % i)
     plt.legend(legends, loc='upper left')
-    plt.savefig("accuracy_graph.png")
+    import uuid
+
+    plt.savefig("accuracy_graph_%s.png" % uuid.uuid4())
