@@ -35,7 +35,6 @@ if __name__ == '__main__':
         os.system(search_cmd)
 
     import matplotlib.pyplot as plt
-    import matplotlib
 
     result_path = os.path.join(args.model_dir, "search_result")
     legends = []
@@ -46,4 +45,4 @@ if __name__ == '__main__':
     plt.legend(legends, loc='upper left')
     import uuid
 
-    plt.savefig("accuracy_graph_%s.png" % uuid.uuid4())
+    plt.savefig(os.path.join(args.model_dir, "search_result", "accuracy_graph_%s.png" % uuid.uuid4()))

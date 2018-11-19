@@ -29,4 +29,4 @@ if __name__ == '__main__':
         legends.append("epoch %d" % i)
 
     plt.legend(legends, loc='upper left')
-    plt.savefig("accuracy_graph.png")
+    plt.savefig(os.path.join(args.model_dir, "search_result", "accuracy_graph.png"))
