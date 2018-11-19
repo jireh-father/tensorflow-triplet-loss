@@ -80,7 +80,7 @@ if __name__ == '__main__':
     if args.restore_epoch is not None:
         restore_epoch = int(args.restore_epoch)
         latste_checkpoint = tf.train.latest_checkpoint(args.model_dir)
-        restore_path = os.path.join(os.path.dirname(latste_checkpoint), "model.ckpt-%d", restore_epoch)
+        restore_path = os.path.join(os.path.dirname(latste_checkpoint), "model.ckpt-%d" % restore_epoch)
         saver.restore(sess, restore_path)
     else:
         saver.restore(sess, tf.train.latest_checkpoint(args.model_dir))
