@@ -13,7 +13,7 @@ if __name__ == '__main__':
 
     matplotlib.use('Agg')
     result_path = os.path.join(args.model_dir, "search_result")
-    result_files = glob.glob(os.path.join(result_path, "*.json"))
+    result_files = glob.glob(os.path.join(result_path, "*_accuracies.json"))
     legends = []
     for result_file in result_files:
         i = int(os.path.basename(result_file).split("_")[0])
