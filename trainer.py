@@ -8,6 +8,7 @@ import time
 
 
 def main(cf):
+    tf.logging.set_verbosity(tf.logging.INFO)
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
     os.environ["CUDA_VISIBLE_DEVICES"] = F.gpu_no
     print("CUDA Visible device", device_lib.list_local_devices())
@@ -71,11 +72,12 @@ def main(cf):
     saver = tf.train.Saver(tf.global_variables(), max_to_keep=cf.keep_checkpoint_max)
     epoch = 1
     steps = 1
+    latest_epoch = 0
     if os.path.isdir(cf.save_dir):
         latest_checkpoint = tf.train.latest_checkpoint(cf.save_dir)
         if latest_checkpoint is not None:
             saver.restore(sess, tf.train.latest_checkpoint(cf.save_dir))
-            latest_epoch = int(latest_checkpoint.split("-")[1])
+            latest_epoch = int(os.path.basename(latest_checkpoint).split("-")[1])
             epoch = latest_epoch + 1
             cf.num_epochs += latest_epoch
 
@@ -117,7 +119,7 @@ def main(cf):
             num_trained_images += cf.batch_size
             steps += 1
             if num_trained_images >= num_examples:
-                if epoch % cf.save_epochs == 0:
+                if epoch - latest_epoch % cf.save_epochs == 0:
                     saver.save(sess, cf.save_dir + "/model.ckpt", epoch)
                     last_saved_epoch = epoch
                 if epoch >= cf.num_epochs:
