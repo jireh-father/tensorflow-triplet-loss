@@ -15,7 +15,7 @@ parser.add_argument('--max_top_k', default=50,
                     help="Directory containing the dataset")
 parser.add_argument('--epoch_list', default=None,
                     help="Directory containing the dataset")
-parser.add_argument('--shutdown_after_train', default=1,
+parser.add_argument('--shutdown_after_train', default="0",
                     help="Directory containing the dataset")
 
 if __name__ == '__main__':
