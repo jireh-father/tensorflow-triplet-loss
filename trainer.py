@@ -131,6 +131,8 @@ def main(cf):
             break
     if last_saved_epoch < epoch:
         saver.save(sess, cf.save_dir + "/model.ckpt", epoch)
+    sess.close()
+    tf.reset_default_graph()
     if cf.eval_after_training:
         os.system(
             "nohup python -u multiple_search_models.py --model_dir=%s --embedding_size=%d --data_dir=%s --model_name=%s --max_top_k=%d --shutdown_after_train=%d > %s/search.log &" %
