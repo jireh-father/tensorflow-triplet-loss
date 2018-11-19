@@ -4,6 +4,7 @@ from tensorflow.python.client import device_lib
 from model import model_fn
 import glob
 import util
+from datetime import datetime
 import time
 
 
@@ -114,8 +115,9 @@ def main(cf):
             start = time.time()
             loss, _ = sess.run([loss_op, train_op], feed_dict={images_ph: batch_images, labels_ph: batch_labels})
             train_time = time.time() - start
-            print("[%d epoch(%d/%d), %d steps] sampling time: %f, train time: %f, loss: %f" % (
-                epoch, steps % steps_each_epoch, steps_each_epoch, steps, sampling_time, train_time, loss))
+            now = datetime.now().strftime('%Y/%m/%d %H:%M:%S')
+            print("[%s: %d epoch(%d/%d), %d steps] sampling time: %f, train time: %f, loss: %f" % (
+                now, epoch, steps % steps_each_epoch, steps_each_epoch, steps, sampling_time, train_time, loss))
             num_trained_images += cf.batch_size
             steps += 1
             if num_trained_images >= num_examples:
