@@ -36,7 +36,7 @@ if __name__ == '__main__':
     result_path = os.path.join(args.model_dir, "search_result")
     legends = []
     for i in model_epochs:
-        accuracies = json.load(open(os.path.join(result_path, "%d_accuracies.json")))
+        accuracies = json.load(open(os.path.join(result_path, "%d_accuracies.json" % i)))
         plt.plot(accuracies)
         legends.append("epoch %d" % i)
     plt.legend(legends, loc='upper left')
