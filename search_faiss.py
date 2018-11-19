@@ -34,7 +34,7 @@ if __name__ == '__main__':
     gpu_index = faiss.index_cpu_to_all_gpus(  # build the index
         cpu_index
     )
-    max_top_k = args.max_top_k
+    max_top_k = int(args.max_top_k)
     gpu_index.add(index_embeddings)  # add vectors to the index
     print(gpu_index.ntotal)
 
