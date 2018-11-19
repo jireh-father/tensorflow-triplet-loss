@@ -13,11 +13,16 @@ parser.add_argument('--model_name', default="tfrecord",
                     help="Directory containing the dataset")
 parser.add_argument('--max_top_k', default=50,
                     help="Directory containing the dataset")
+parser.add_argument('--epoch_list', default=None,
+                    help="Directory containing the dataset")
 
 if __name__ == '__main__':
     args = parser.parse_args()
-    model_epochs = [int(os.path.basename(path).split("-")[1].split('.')[0]) for path in
-                    glob.glob(os.path.join(args.model_dir, "model*.index"))]
+    if args.epoch_list is None:
+        model_epochs = [int(os.path.basename(path).split("-")[1].split('.')[0]) for path in
+                        glob.glob(os.path.join(args.model_dir, "model*.index"))]
+    else:
+        model_epochs = [int(e) for e in args.epoch_list.split(",")]
     model_epochs.sort()
     for i in model_epochs:
         eval_cmd = "python eval_retrieval_accuracy_v2.py --model_dir=%s --data_dir=%s --restore_epoch=%d --embedding_size=%d --model_name=%s" % (
