@@ -24,8 +24,8 @@ if __name__ == '__main__':
             "python eval_retrieval_accuracy_v2.py --model_dir=%s --data_dir=%s --restore_epoch=%d --embedding_size=%d --model_name=%s" % (
                 args.model_dir, args.data_dir, i, int(args.embedding_size), args.model_name))
         os.system(
-            "python search_faiss.py  --model_dir=%s --data_dir=%s --restore_epoch=%d --embedding_size=%d --model_name=%s --max_top_k=%d" % (
-                args.model_dir, args.data_dir, i, int(args.embedding_size), args.model_name, int(args.max_top_k)))
+            "python search_faiss.py  --model_dir=%s --data_dir=%s --restore_epoch=%d --embedding_size=%d --max_top_k=%d" % (
+                args.model_dir, args.data_dir, i, int(args.embedding_size), int(args.max_top_k)))
 
     import matplotlib.pyplot as plt
     import matplotlib
