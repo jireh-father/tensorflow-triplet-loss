@@ -131,6 +131,10 @@ def main(cf):
             break
     if last_saved_epoch < epoch:
         saver.save(sess, cf.save_dir + "/model.ckpt", epoch)
+    if cf.eval_after_training:
+        os.system(
+            "python multiple_search_models.py --model_dir=%s --embedding_size=%d --data_dir=%s --model_name=%s --max_top_k=%d" %
+            (cf.save_dir, cf.embedding_size, cf.data_dir, cf.model_name, cf.eval_max_top_k))
     if cf.shutdown_after_train:
         os.system("sudo shutdown now")
 
@@ -166,6 +170,8 @@ if __name__ == '__main__':
     fl.DEFINE_integer('batch_size', 64, '')
     fl.DEFINE_integer('num_image_sampling', 4, '')
     fl.DEFINE_integer('num_single_image_max', 4, '')
+    fl.DEFINE_boolean('eval_after_training', False, '')
+    fl.DEFINE_integer('eval_max_top_k', 50, '')
     fl.DEFINE_boolean('shutdown_after_train', False, '')
 
     fl.DEFINE_integer('num_map_parallel', 4, '')
