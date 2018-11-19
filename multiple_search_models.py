@@ -15,6 +15,8 @@ parser.add_argument('--max_top_k', default=50,
                     help="Directory containing the dataset")
 parser.add_argument('--epoch_list', default=None,
                     help="Directory containing the dataset")
+parser.add_argument('--shutdown_after_train', default=1,
+                    help="Directory containing the dataset")
 
 if __name__ == '__main__':
     args = parser.parse_args()
@@ -46,3 +48,5 @@ if __name__ == '__main__':
     import uuid
 
     plt.savefig(os.path.join(args.model_dir, "search_result", "accuracy_graph_%s.png" % uuid.uuid4()))
+    if args.shutdown_after_train == "1":
+        os.system("sudo shutdown now")
