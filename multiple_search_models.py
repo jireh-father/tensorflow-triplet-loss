@@ -19,7 +19,7 @@ if __name__ == '__main__':
     model_epochs = [int(os.path.basename(path).split("-")[1].split('.')[0]) for path in
                     glob.glob(os.path.join(args.model_dir, "model*.index"))]
     model_epochs.sort()
-    for i in range(model_epochs):
+    for i in model_epochs:
         os.system(
             "python eval_retrieval_accuracy_v2.py --model_dir=%s --data_dir=%s --restore_epoch=%d --embedding_size=%d --model_name=%s" % (
                 args.model_dir, args.data_dir, i, int(args.embedding_size), args.model_name))
@@ -33,7 +33,7 @@ if __name__ == '__main__':
     matplotlib.use('Agg')
     result_path = os.path.join(args.model_dir, "search_result")
     legends = []
-    for i in range(model_epochs):
+    for i in model_epochs:
         accuracies = json.load(open(os.path.join(result_path, "%d_accuracies.json")))
         plt.plot(accuracies)
         legends.append("epoch %d" % i)
