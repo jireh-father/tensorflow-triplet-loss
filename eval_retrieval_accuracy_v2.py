@@ -65,7 +65,7 @@ if __name__ == '__main__':
     iterator = dataset.make_initializable_iterator()
     images, labels = iterator.get_next()
 
-    embedding_op = model_fn.build_model(images, None, args, False)
+    embedding_op = model_fn.build_model(images, None, args, None, False)
 
     query_files = glob.glob(os.path.join(args.data_dir, "*_query*tfrecord"))
     query_files.sort()
