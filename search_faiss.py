@@ -19,7 +19,8 @@ parser.add_argument('--gpu_no', default="0",
 if __name__ == '__main__':
 
     args = parser.parse_args()
-
+    os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+    os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu_no
     query_embeddings = np.load(os.path.join(args.model_dir, "query_embeddings.npy")).astype(np.float32)
     index_embeddings = np.load(os.path.join(args.model_dir, "index_embeddings.npy")).astype(np.float32)
     query_labels = np.load(os.path.join(args.model_dir, "query_labels.npy"))
@@ -31,11 +32,10 @@ if __name__ == '__main__':
 
     print("number of GPUs:", ngpus)
     cpu_index = faiss.IndexFlatL2(int(args.embedding_size))
-    res = faiss.StandardGpuResources()
-    gpu_index = faiss.index_cpu_to_gpu(  # build the index
-        res, int(args.gpu_no), cpu_index
-    )
 
+    gpu_index = faiss.index_cpu_to_all_gpus(  # build the index
+        cpu_index
+    )
     max_top_k = int(args.max_top_k)
     gpu_index.add(index_embeddings)  # add vectors to the index
     print(gpu_index.ntotal)
