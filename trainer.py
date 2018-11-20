@@ -13,6 +13,16 @@ def main(cf):
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
     os.environ["CUDA_VISIBLE_DEVICES"] = F.gpu_no
     print("CUDA Visible device", device_lib.list_local_devices())
+    now = datetime.now().strftime('%Y%m%d%H%M%S')
+    if not os.path.isdir(cf.save_dir):
+        os.makedirs(cf.save_dir)
+    f = open(os.path.join(cf.save_dir, "train_parameters_%s.txt" % now), mode="w+")
+    iterator = iter(cf)
+    for key in iterator:
+        f.write("%s:%s\n" % (key, str(getattr(cf, key))))
+
+    sys.exit()
+
     # inputs_ph = tf.placeholder(tf.float32, [None, cf.input_size, cf.input_size, cf.input_channel],
     #                            name="inputs")
     # labels_ph = tf.placeholder(tf.int32, [None], name="labels")
@@ -81,7 +91,8 @@ def main(cf):
             latest_epoch = int(os.path.basename(latest_checkpoint).split("-")[1])
             epoch = latest_epoch + 1
             cf.num_epochs += latest_epoch
-
+            f.write("%s:%s\n" % ("restore_checkpoint", latest_checkpoint))
+    f.close()
     num_trained_images = 0
     last_saved_epoch = None
     while True:
