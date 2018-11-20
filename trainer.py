@@ -121,7 +121,7 @@ def main(cf):
             num_trained_images += cf.batch_size
             steps += 1
             if num_trained_images >= num_examples:
-                if epoch - latest_epoch % cf.save_epochs == 0:
+                if (epoch - latest_epoch) % cf.save_epochs == 0:
                     saver.save(sess, cf.save_dir + "/model.ckpt", epoch)
                     last_saved_epoch = epoch
                 if epoch >= cf.num_epochs:
