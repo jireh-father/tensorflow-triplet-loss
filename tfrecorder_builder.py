@@ -4,9 +4,9 @@ import math, json
 import sys
 from core import dataset_utils
 import shutil
-import util
 import glob
 from multiprocessing import Process
+import numpy as np
 
 
 def _get_dataset_filename(dataset_name, output_dir, phase_name, shard_id, num_shards):
@@ -70,7 +70,7 @@ class ImageReader(object):
 
 
 def _convert_dataset(dataset_name, phase_name, filenames, class_names_to_ids, output_dir, num_shards,
-                     num_channels=3):
+                     num_channels=3, attr_map=None):
     """Converts the given filenames to a TFRecord dataset.
 
   Args:
@@ -110,13 +110,17 @@ def _convert_dataset(dataset_name, phase_name, filenames, class_names_to_ids, ou
 
                         class_name = os.path.basename(os.path.dirname(filenames[i]))
                         class_id = class_names_to_ids[class_name]
+                        attr = None
+                        if attr_map is not None:
+                            attr = attr_map[os.path.basename(filenames[i])]
 
                         ext = 'jpg'
                         if sys.version_info[0] == 3:
                             ext = ext.encode()
                             class_name = class_name.encode()
 
-                        example = dataset_utils.image_to_tfexample(image_data, ext, height, width, class_id, class_name)
+                        example = dataset_utils.image_to_tfexample(image_data, ext, height, width, class_id, class_name,
+                                                                   attr)
                         tfrecord_writer.write(example.SerializeToString())
 
     sys.stdout.write('\n')
@@ -135,7 +139,8 @@ def _clean_up_temporary_files(dataset_dir):
         shutil.rmtree(tmp_dir)
 
 
-def make_tfrecords(dataset_name, phase_name, image_dir, output_dir, num_shards, num_channels, remove_images):
+def make_tfrecords(dataset_name, phase_name, image_dir, output_dir, num_shards, num_channels, remove_images,
+                   attr_path=None):
     if not tf.gfile.Exists(image_dir):
         tf.gfile.MakeDirs(image_dir)
 
@@ -143,17 +148,27 @@ def make_tfrecords(dataset_name, phase_name, image_dir, output_dir, num_shards, 
         print('Dataset files already exist. Exiting without re-creating them.')
         return False
 
+    if not os.path.isdir(output_dir):
+        os.makedirs(output_dir)
+
     photo_filenames, class_names = _get_filenames_and_classes(image_dir)
+
+    np.save(os.path.join(output_dir, "file_names_%s.npy" % phase_name), photo_filenames)
 
     class_names_to_ids = dict(zip(class_names, range(len(class_names))))
 
     # todo: add bounding box, landmarks, etc data
     # First, convert the training and validation sets.
+    attr_map = None
+    if attr_path is not None:
+        assert os.path.isfile(attr_path)
+        attr_map = json.load(open(attr_path))
     _convert_dataset(dataset_name, phase_name, photo_filenames, class_names_to_ids, output_dir, num_shards,
-                     num_channels)
+                     num_channels, attr_map)
 
     # Finally, write the labels file:
     labels_to_class_names = dict(zip(range(len(class_names)), class_names))
+    json.dump(labels_to_class_names, open(os.path.join(output_dir, "labels_%s.json" % phase_name), "w+"))
     dataset_utils.write_label_file(labels_to_class_names, image_dir, dataset_name)
 
     if remove_images:
@@ -163,29 +178,35 @@ def make_tfrecords(dataset_name, phase_name, image_dir, output_dir, num_shards, 
 
 if __name__ == '__main__':
     fl = tf.app.flags
-    fl.DEFINE_boolean('parallel_exec', True, '')
-    fl.DEFINE_boolean('recursive', True, '')
+    fl.DEFINE_boolean('parallel_exec', False, '')
+    fl.DEFINE_boolean('multiple', True, '')
 
     fl.DEFINE_string('dataset_name', "deepfashion", "")
     fl.DEFINE_string('phase_name', "train", "")
-    fl.DEFINE_string('image_dir', 'D:/data/fashion/image_retrieval/deep_fashion/consumer-to-shop/tfrecord_images', '')
-    fl.DEFINE_string('tfrecord_output', 'D:/data/fashion/image_retrieval/deep_fashion/consumer-to-shop/tfrecords', '')
+    fl.DEFINE_string('image_dir',
+                     'D:/data/fashion/image_retrieval/deep_fashion/In-shop Clothes Retrieval Benchmark/split', '')
+    fl.DEFINE_string('tfrecord_output',
+                     'D:/data/fashion/image_retrieval/deep_fashion/In-shop Clothes Retrieval Benchmark/tfrecord_with_attr',
+                     '')
+    fl.DEFINE_string('attr_path',
+                     'D:/data/fashion/image_retrieval/deep_fashion/In-shop Clothes Retrieval Benchmark/Anno/attr_file_map.json',
+                     '')
     fl.DEFINE_integer('num_channels', 3, '')
-    fl.DEFINE_integer('num_shards', 8, '')
+    fl.DEFINE_integer('num_shards', 4, '')
     fl.DEFINE_boolean('remove_images', False, '')
 
     F = tf.app.flags.FLAGS
 
-    if F.recursive:
+    if F.multiple:
         image_dirs = glob.glob(os.path.join(F.image_dir, "*"))
         for image_dir in image_dirs:
             p = Process(target=make_tfrecords, args=(
                 F.dataset_name, os.path.basename(image_dir), image_dir, F.tfrecord_output, F.num_shards,
-                F.num_channels, F.remove_images,))
+                F.num_channels, F.remove_images, F.attr_path))
             print("started to build tfrecords: %s" % (image_dir))
             p.start()
             if not F.parallel_exec:
                 p.join()
     else:
         make_tfrecords(F.dataset_name, F.phase_name, F.image_dir, F.tfrecord_output, F.num_shards, F.num_channels,
-                       F.remove_images)
+                       F.remove_images, F.attr_path)

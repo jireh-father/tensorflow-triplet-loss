@@ -142,7 +142,7 @@ def model_fn(features, labels, mode, params):
     return tf.estimator.EstimatorSpec(mode, loss=loss, train_op=train_op)
 
 
-def build_model(features, labels, cf, is_training=True):
+def build_model(features, labels, cf, attrs=None, is_training=True):
     images = features
 
     # -----------------------------------------------------------
@@ -164,10 +164,10 @@ def build_model(features, labels, cf, is_training=True):
 
     # Define triplet loss
     if cf.triplet_strategy == "batch_all":
-        loss, fraction = batch_all_triplet_loss(labels, embeddings, margin=cf.margin,
+        loss, fraction = batch_all_triplet_loss(labels, embeddings, margin=cf.margin, attrs=attrs,
                                                 squared=cf.squared)
     elif cf.triplet_strategy == "batch_hard":
-        loss = batch_hard_triplet_loss(labels, embeddings, margin=cf.margin,
+        loss = batch_hard_triplet_loss(labels, embeddings, margin=cf.margin, attrs=attrs,
                                        squared=cf.squared)
     else:
         raise ValueError("Triplet strategy not recognized: {}".format(cf.triplet_strategy))

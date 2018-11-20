@@ -6,6 +6,7 @@ import glob
 import util
 from datetime import datetime
 import time
+import numpy as np
 
 
 def main(cf):
@@ -25,10 +26,17 @@ def main(cf):
     #                            name="inputs")
     # labels_ph = tf.placeholder(tf.int32, [None], name="labels")
     tf.set_random_seed(123)
-    images_ph = tf.placeholder(tf.float32, [None, cf.input_size, cf.input_size, cf.input_channel], name="inputs")
-    labels_ph = tf.placeholder(tf.int32, [None], name="labels")
-    seed_ph = tf.placeholder(tf.int64, (), name="shuffle_seed")
-    loss_op, train_op = model_fn.build_model(images_ph, labels_ph, cf, True)
+    images_ph = tf.placeholder(tf.float32, [cf.batch_size, cf.input_size, cf.input_size, cf.input_channel],
+                               name="inputs")
+    labels_ph = tf.placeholder(tf.int32, [cf.batch_size], name="labels")
+    if cf.use_attr:
+        attrs_ph = tf.placeholder(tf.float32, [cf.batch_size, cf.attr_dim], name="attrs")
+        cf.embedding_size = cf.attr_dim
+    else:
+        attrs_ph = None
+    # seed_ph = tf.placeholder(tf.int64, (), name="shuffle_seed")
+
+    loss_op, train_op = model_fn.build_model(images_ph, labels_ph, cf, attrs_ph, True)
 
     def train_pre_process(example_proto):
         features = {"image/encoded": tf.FixedLenFeature((), tf.string, default_value=""),
@@ -36,9 +44,10 @@ def main(cf):
                     'image/height': tf.FixedLenFeature((), tf.int64, default_value=0),
                     'image/width': tf.FixedLenFeature((), tf.int64, default_value=0)
                     }
+        if cf.use_attr:
+            features["image/attr"] = tf.VarLenFeature(dtype=tf.int64)
 
         parsed_features = tf.parse_single_example(example_proto, features)
-        image = parsed_features["image/encoded"]
         image = tf.image.decode_jpeg(parsed_features["image/encoded"], 3)
         image = tf.cast(image, tf.float32)
 
@@ -52,8 +61,10 @@ def main(cf):
         image = tf.multiply(image, 2.0)
 
         label = parsed_features["image/class/label"]
-
-        return image, label
+        if cf.use_attr:
+            return image, label, parsed_features["image/attr"]
+        else:
+            return image, label
 
     files = glob.glob(os.path.join(cf.data_dir, "*_train*tfrecord"))
     files.sort()
@@ -71,7 +82,10 @@ def main(cf):
 
     iterator = dataset.make_one_shot_iterator()
     # iterator = dataset.make_initializable_iterator()
-    images, labels = iterator.get_next()
+    if cf.use_attr:
+        images, labels, attrs = iterator.get_next()
+    else:
+        images, labels = iterator.get_next()
 
     tf_config = tf.ConfigProto()
     tf_config.gpu_options.allow_growth = True
@@ -97,7 +111,13 @@ def main(cf):
         # sess.run(iterator.initializer, feed_dict={seed_ph: steps})
         try:
             start = time.time()
-            tmp_images, tmp_labels = sess.run([images, labels])
+            if cf.use_attr:
+                tmp_images, tmp_labels, tmp_attrs = sess.run([images, labels, attrs])
+                tmp_attrs = np.reshape(tmp_attrs.values, [cf.sampling_buffer_size, cf.attr_dim])
+                tmp_attrs = tmp_attrs.astype(np.float64)
+            else:
+                tmp_images, tmp_labels = sess.run([images, labels])
+
             pair_indices = set()
             single_index_map = {}
             label_buffer = {}
@@ -118,11 +138,17 @@ def main(cf):
             # print(pair_indices)
             batch_images = tmp_images[pair_indices]
             batch_labels = tmp_labels[pair_indices]
+            if cf.use_attr:
+                batch_attrs = tmp_attrs[pair_indices]
+
             sampling_time = time.time() - start
             tmp_images = None
             tmp_labels = None
             start = time.time()
-            loss, _ = sess.run([loss_op, train_op], feed_dict={images_ph: batch_images, labels_ph: batch_labels})
+            feed_dict = {images_ph: batch_images, labels_ph: batch_labels}
+            if cf.use_attr:
+                feed_dict[attrs_ph] = batch_attrs
+            loss, _ = sess.run([loss_op, train_op], feed_dict=feed_dict)
             train_time = time.time() - start
             now = datetime.now().strftime('%Y/%m/%d %H:%M:%S')
             print("[%s: %d epoch(%d/%d), %d steps] sampling time: %f, train time: %f, loss: %f" % (
@@ -161,7 +187,9 @@ def train():
 if __name__ == '__main__':
     fl = tf.app.flags
 
-    fl.DEFINE_string('data_dir', 'D:\data\\fashion\image_retrieval\cafe24product\\tfrecord', '')
+    fl.DEFINE_string('data_dir',
+                     'D:\data\\fashion\image_retrieval\deep_fashion\In-shop Clothes Retrieval Benchmark\\tfrecord_with_attr',
+                     '')
     fl.DEFINE_string('sampling_name', 'pk', 'pk, random...')
     fl.DEFINE_string('model_name', 'alexnet_v2', '')
     fl.DEFINE_integer('num_epochs', 10, '')
@@ -171,10 +199,12 @@ if __name__ == '__main__':
     fl.DEFINE_string('preprocessing_name', 'default_preprocessing', '')
     fl.DEFINE_integer('sampling_buffer_size', 1024, '')
     fl.DEFINE_integer('shuffle_buffer_size', 1000, '')
+    fl.DEFINE_boolean('use_attr', True, '')
+    fl.DEFINE_integer('attr_dim', 463, '')
     fl.DEFINE_integer('prefetch_buffer_size', 1024, '')
     fl.DEFINE_integer('preprocessing_num_parallel', 4, '')
     fl.DEFINE_string('save_dir', 'experiments/base_model', '')
-    fl.DEFINE_string('triplet_strategy', 'batch_all', '')
+    fl.DEFINE_string('triplet_strategy', 'batch_hard', '')
     fl.DEFINE_float('margin', 0.5, '')
     fl.DEFINE_boolean('squared', False, '')
     fl.DEFINE_boolean('use_batch_norm', False, '')
