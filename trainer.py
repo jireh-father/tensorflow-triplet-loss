@@ -204,7 +204,7 @@ if __name__ == '__main__':
     fl.DEFINE_integer('prefetch_buffer_size', 1024, '')
     fl.DEFINE_integer('preprocessing_num_parallel', 4, '')
     fl.DEFINE_string('save_dir', 'experiments/base_model', '')
-    fl.DEFINE_string('triplet_strategy', 'batch_hard', '')
+    fl.DEFINE_string('triplet_strategy', 'batch_all', '')
     fl.DEFINE_float('margin', 0.5, '')
     fl.DEFINE_boolean('squared', False, '')
     fl.DEFINE_boolean('use_batch_norm', False, '')
