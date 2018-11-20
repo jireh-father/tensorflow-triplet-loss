@@ -16,6 +16,7 @@ from model import tfrecord_input_fn
 import util
 from model import model_fn
 import glob
+from tensorflow.python.client import device_lib
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--model_dir', default='experiments/alexnet',
@@ -28,11 +29,17 @@ parser.add_argument('--embedding_size', default=128,
                     help="Directory containing the dataset")
 parser.add_argument('--model_name', default="tfrecord",
                     help="Directory containing the dataset")
+parser.add_argument('--gpu_no', default="0",
+                    help="Directory containing the dataset")
 if __name__ == '__main__':
     tf.logging.set_verbosity(tf.logging.INFO)
 
     # Load the parameters from json file
     args = parser.parse_args()
+
+    os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+    os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu_no
+    print("CUDA Visible device", device_lib.list_local_devices())
 
 
     def train_pre_process(example_proto):

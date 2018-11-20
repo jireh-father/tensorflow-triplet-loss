@@ -14,7 +14,8 @@ parser.add_argument('--max_top_k', default=50,
                     help="Directory containing the dataset")
 parser.add_argument('--restore_epoch', default=None,
                     help="Directory containing the dataset")
-
+parser.add_argument('--gpu_no', default="0",
+                    help="Directory containing the dataset")
 if __name__ == '__main__':
 
     args = parser.parse_args()
@@ -30,10 +31,11 @@ if __name__ == '__main__':
 
     print("number of GPUs:", ngpus)
     cpu_index = faiss.IndexFlatL2(int(args.embedding_size))
-
-    gpu_index = faiss.index_cpu_to_all_gpus(  # build the index
-        cpu_index
+    res = faiss.StandardGpuResources()
+    gpu_index = faiss.index_cpu_to_gpu(  # build the index
+        res, int(args.gpu_no), cpu_index
     )
+
     max_top_k = int(args.max_top_k)
     gpu_index.add(index_embeddings)  # add vectors to the index
     print(gpu_index.ntotal)
