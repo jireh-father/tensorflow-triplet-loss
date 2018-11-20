@@ -137,9 +137,9 @@ def main(cf):
     tf.reset_default_graph()
     if cf.eval_after_training:
         os.system(
-            "nohup python -u multiple_search_models.py --model_dir=%s --embedding_size=%d --data_dir=%s --model_name=%s --max_top_k=%d --shutdown_after_train=%d > %s/search.log &" %
+            "nohup python -u multiple_search_models.py --model_dir=%s --embedding_size=%d --data_dir=%s --model_name=%s --max_top_k=%d --shutdown_after_train=%d --gpu_no=%s > %s/search.log &" %
             (cf.save_dir, cf.embedding_size, cf.data_dir, cf.model_name, cf.eval_max_top_k,
-             1 if cf.shutdown_after_train else 0, cf.save_dir))
+             1 if cf.shutdown_after_train else 0, cf.save_dir, cf.gpu_no))
     else:
         if cf.shutdown_after_train:
             os.system("sudo shutdown now")
