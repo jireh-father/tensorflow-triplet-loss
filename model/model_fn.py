@@ -142,17 +142,19 @@ def model_fn(features, labels, mode, params):
     return tf.estimator.EstimatorSpec(mode, loss=loss, train_op=train_op)
 
 
-def build_model(features, labels, cf, attrs=None, is_training=True):
+def build_model(features, labels, cf, attrs=None, is_training=True, use_attr_net=False):
     images = features
 
     # -----------------------------------------------------------
     # MODEL: define the layers of the model
     with tf.variable_scope('model'):
         # Compute the embeddings with the model
-        if cf.model_name == "base_model":
-            embeddings = build_model(is_training, images, cf)
-        else:
-            embeddings = build_slim_model(is_training, images, cf)
+        embeddings = build_slim_model(is_training, images, cf)
+        if attrs is not None and use_attr_net:
+            hidden_num = int((cf.attr_dim - cf.embedding_size) / 2)
+            attr_net = tf.layers.dense(attrs, hidden_num, tf.nn.relu, trainable=is_training)
+            attr_net = tf.layers.dropout(attr_net, training=is_training)
+            attrs = tf.layers.dense(attr_net, cf.embedding_size, tf.nn.relu, trainable=is_training)
     embedding_mean_norm = tf.reduce_mean(tf.norm(embeddings, axis=1))
 
     tf.summary.scalar("embedding_mean_norm", embedding_mean_norm)

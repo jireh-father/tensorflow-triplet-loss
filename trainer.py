@@ -31,12 +31,13 @@ def main(cf):
     labels_ph = tf.placeholder(tf.int32, [cf.batch_size], name="labels")
     if cf.use_attr:
         attrs_ph = tf.placeholder(tf.float32, [cf.batch_size, cf.attr_dim], name="attrs")
-        cf.embedding_size = cf.attr_dim
+        if not cf.use_attr_net:
+            cf.embedding_size = cf.attr_dim
     else:
         attrs_ph = None
     # seed_ph = tf.placeholder(tf.int64, (), name="shuffle_seed")
 
-    loss_op, train_op = model_fn.build_model(images_ph, labels_ph, cf, attrs_ph, True)
+    loss_op, train_op = model_fn.build_model(images_ph, labels_ph, cf, attrs_ph, True, cf.use_attr_net)
 
     def train_pre_process(example_proto):
         features = {"image/encoded": tf.FixedLenFeature((), tf.string, default_value=""),
@@ -197,11 +198,12 @@ if __name__ == '__main__':
     fl.DEFINE_integer('input_channel', 3, '')
     fl.DEFINE_integer('embedding_size', 128, '')
     fl.DEFINE_string('preprocessing_name', 'default_preprocessing', '')
-    fl.DEFINE_integer('sampling_buffer_size', 1024, '')
-    fl.DEFINE_integer('shuffle_buffer_size', 1000, '')
+    fl.DEFINE_integer('sampling_buffer_size', 64, '')
+    fl.DEFINE_integer('shuffle_buffer_size', 64, '')
     fl.DEFINE_boolean('use_attr', True, '')
+    fl.DEFINE_boolean('use_attr_net', True, '')
     fl.DEFINE_integer('attr_dim', 463, '')
-    fl.DEFINE_integer('prefetch_buffer_size', 1024, '')
+    fl.DEFINE_integer('prefetch_buffer_size', 64, '')
     fl.DEFINE_integer('preprocessing_num_parallel', 4, '')
     fl.DEFINE_string('save_dir', 'experiments/base_model', '')
     fl.DEFINE_string('triplet_strategy', 'batch_all', '')
