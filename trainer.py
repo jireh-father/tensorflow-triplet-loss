@@ -21,8 +21,6 @@ def main(cf):
     for key in iterator:
         f.write("%s:%s\n" % (key, str(getattr(cf, key))))
 
-    sys.exit()
-
     # inputs_ph = tf.placeholder(tf.float32, [None, cf.input_size, cf.input_size, cf.input_channel],
     #                            name="inputs")
     # labels_ph = tf.placeholder(tf.int32, [None], name="labels")
