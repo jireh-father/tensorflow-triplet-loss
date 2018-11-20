@@ -47,8 +47,17 @@ if __name__ == '__main__':
         plt.plot(accuracies)
         legends.append("epoch %d" % i)
     plt.legend(legends, loc='upper left')
-    import uuid
+    from datetime import datetime
 
-    plt.savefig(os.path.join(args.model_dir, "search_result", "accuracy_graph_%s.png" % uuid.uuid4()))
+    now = datetime.now().strftime('%Y%m%d%H%M%S')
+    epochs_str = "all"
+    if args.epoch_list is not None:
+        epochs_str = "-".join(model_epochs)
+
+    plt.savefig(os.path.join(args.model_dir, "search_result",
+                             "accuracy_graph-date[%s]_model[%s]_log[%s]_data[%s]_embed[%d]_maxtopk[%d]_epochs[%s]_gpuno[%s].png" % (
+                                 now, args.model_name, os.path.basename(args.model_dir),
+                                 os.path.basename(args.data_dir), int(args.embedding_size), int(args.max_top_k),
+                                 epochs_str, args.gpu_no)))
     if args.shutdown_after_train == "1":
         os.system("sudo shutdown now")
