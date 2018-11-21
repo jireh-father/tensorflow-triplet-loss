@@ -38,7 +38,8 @@ def main(cf):
         attrs_ph = None
     # seed_ph = tf.placeholder(tf.int64, (), name="shuffle_seed")
 
-    loss_op, train_op = model_fn.build_model(images_ph, labels_ph, cf, attrs_ph, True, cf.use_attr_net)
+    loss_op, train_op = model_fn.build_model(images_ph, labels_ph, cf, attrs_ph, True, cf.use_attr_net,
+                                             cf.num_hidden_attr_net)
 
     def train_pre_process(example_proto):
         features = {"image/encoded": tf.FixedLenFeature((), tf.string, default_value=""),
@@ -223,6 +224,7 @@ if __name__ == '__main__':
     fl.DEFINE_integer('shuffle_buffer_size', 64, '')
     fl.DEFINE_boolean('use_attr', False, '')
     fl.DEFINE_boolean('use_attr_net', False, '')
+    fl.DEFINE_integer('num_hidden_attr_net', 1, '')
     fl.DEFINE_integer('attr_dim', 463, '')
     fl.DEFINE_integer('prefetch_buffer_size', 64, '')
     fl.DEFINE_integer('preprocessing_num_parallel', 4, '')

@@ -19,6 +19,8 @@ parser.add_argument('--shutdown_after_train', default="0",
                     help="Directory containing the dataset")
 parser.add_argument('--gpu_no', default="0",
                     help="Directory containing the dataset")
+parser.add_argument('--step_type', default="epoch",
+                    help="Directory containing the dataset")
 
 if __name__ == '__main__':
     args = parser.parse_args()
@@ -45,7 +47,7 @@ if __name__ == '__main__':
     for i in model_epochs:
         accuracies = json.load(open(os.path.join(result_path, "%d_accuracies.json" % i)))
         plt.plot(accuracies)
-        legends.append("epoch %d" % i)
+        legends.append("%s %d" % (args.step_type, i))
     plt.legend(legends, loc='upper left')
     from datetime import datetime
 
