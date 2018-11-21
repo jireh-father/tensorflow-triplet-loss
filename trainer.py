@@ -109,6 +109,7 @@ def main(cf):
     f.close()
     num_trained_images = 0
     last_saved_epoch = None
+    last_saved_step = None
     while True:
         # sess.run(iterator.initializer, feed_dict={seed_ph: steps})
         try:
@@ -156,9 +157,18 @@ def main(cf):
             print("[%s: %d epoch(%d/%d), %d steps] sampling time: %f, train time: %f, loss: %f" % (
                 now, epoch, steps % steps_each_epoch, steps_each_epoch, steps, sampling_time, train_time, loss))
             num_trained_images += cf.batch_size
+
+            if cf.use_save_steps:
+                if steps % cf.save_steps == 0:
+                    saver.save(sess, cf.save_dir + "/model.ckpt", steps)
+                    last_saved_step = steps
+
+            if cf.num_steps is not None and steps >= cf.num_steps:
+                break
             steps += 1
+
             if num_trained_images >= num_examples:
-                if (epoch - latest_epoch) % cf.save_epochs == 0:
+                if not cf.use_save_steps and cf.save_epochs >= 1 and (epoch - latest_epoch) % cf.save_epochs == 0:
                     saver.save(sess, cf.save_dir + "/model.ckpt", epoch)
                     last_saved_epoch = epoch
                 if epoch >= cf.num_epochs:
@@ -168,8 +178,14 @@ def main(cf):
 
         except tf.errors.OutOfRangeError:
             break
-    if last_saved_epoch < epoch:
-        saver.save(sess, cf.save_dir + "/model.ckpt", epoch)
+
+    if cf.use_save_steps:
+        if last_saved_step < steps:
+            saver.save(sess, cf.save_dir + "/model.ckpt", steps)
+    else:
+        if last_saved_epoch < epoch:
+            saver.save(sess, cf.save_dir + "/model.ckpt", epoch)
+
     sess.close()
     tf.reset_default_graph()
     if cf.eval_after_training:
@@ -193,29 +209,31 @@ if __name__ == '__main__':
     fl = tf.app.flags
 
     fl.DEFINE_string('data_dir',
-                     'D:\data\\fashion\image_retrieval\deep_fashion\In-shop Clothes Retrieval Benchmark\\tfrecord_with_attr',
+                     'D:\data\\fashion\image_retrieval\deep_fashion\In-shop Clothes Retrieval Benchmark\\tfrecord',
                      '')
     fl.DEFINE_string('sampling_name', 'pk', 'pk, random...')
     fl.DEFINE_string('model_name', 'alexnet_v2', '')
     fl.DEFINE_integer('num_epochs', 10, '')
+    fl.DEFINE_integer('num_steps', 5, '')
     fl.DEFINE_integer('input_size', 224, '')
     fl.DEFINE_integer('input_channel', 3, '')
     fl.DEFINE_integer('embedding_size', 128, '')
     fl.DEFINE_string('preprocessing_name', 'default_preprocessing', '')
     fl.DEFINE_integer('sampling_buffer_size', 64, '')
     fl.DEFINE_integer('shuffle_buffer_size', 64, '')
-    fl.DEFINE_boolean('use_attr', True, '')
-    fl.DEFINE_boolean('use_attr_net', True, '')
+    fl.DEFINE_boolean('use_attr', False, '')
+    fl.DEFINE_boolean('use_attr_net', False, '')
     fl.DEFINE_integer('attr_dim', 463, '')
     fl.DEFINE_integer('prefetch_buffer_size', 64, '')
     fl.DEFINE_integer('preprocessing_num_parallel', 4, '')
-    fl.DEFINE_string('save_dir', 'experiments/base_model', '')
+    fl.DEFINE_string('save_dir', 'experiments/test', '')
     fl.DEFINE_string('triplet_strategy', 'batch_all', '')
     fl.DEFINE_float('margin', 0.5, '')
     fl.DEFINE_boolean('squared', False, '')
     fl.DEFINE_boolean('use_batch_norm', False, '')
     fl.DEFINE_string('data_mid_name', 'val', '')
-    fl.DEFINE_integer('save_steps', 10000, '')
+    fl.DEFINE_boolean('use_save_steps', True, '')
+    fl.DEFINE_integer('save_steps', 1, '')
     fl.DEFINE_integer('save_epochs', 1, '')
     fl.DEFINE_integer('keep_checkpoint_max', 5, '')
     fl.DEFINE_integer('batch_size', 64, '')
