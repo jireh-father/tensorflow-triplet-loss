@@ -173,10 +173,10 @@ def batch_all_triplet_loss(labels, embeddings, margin, attrs=None, squared=False
     fraction_positive_triplets = num_positive_triplets / (num_valid_triplets + 1e-16)
 
     # Get final mean triplet loss over the positive valid triplets
-    triplet_loss = tf.reduce_sum(triplet_loss) / (num_positive_triplets + 1e-16)
+    default_triplet_loss = tf.reduce_sum(triplet_loss) / (num_positive_triplets + 1e-16)
 
     if attrs is None:
-        return triplet_loss, fraction_positive_triplets
+        return default_triplet_loss, fraction_positive_triplets
 
     pairwise_dist = _pairwise_distances(embeddings, attrs, squared=squared)
     # shape (batch_size, batch_size, 1)
@@ -242,7 +242,7 @@ def batch_all_triplet_loss(labels, embeddings, margin, attrs=None, squared=False
     # Get final mean triplet loss over the positive valid triplets
     av_triplet_loss = tf.reduce_sum(triplet_loss) / (num_positive_triplets + 1e-16)
 
-    return triplet_loss + va_triplet_loss + av_triplet_loss, fraction_positive_triplets + va_fraction_positive_triplets + av_fraction_positive_triplets
+    return default_triplet_loss + va_triplet_loss + av_triplet_loss, fraction_positive_triplets + va_fraction_positive_triplets + av_fraction_positive_triplets
 
 
 def batch_hard_triplet_loss(labels, embeddings, margin, attrs=None, squared=False):
@@ -361,4 +361,5 @@ def batch_hard_triplet_loss(labels, embeddings, margin, attrs=None, squared=Fals
 
     # Get final mean triplet loss
     av_triplet_loss = tf.reduce_mean(va_triplet_loss)
+
     return triplet_loss + av_triplet_loss + va_triplet_loss
