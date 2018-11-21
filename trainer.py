@@ -232,7 +232,7 @@ if __name__ == '__main__':
     fl.DEFINE_boolean('squared', False, '')
     fl.DEFINE_boolean('use_batch_norm', False, '')
     fl.DEFINE_string('data_mid_name', 'val', '')
-    fl.DEFINE_boolean('use_save_steps', True, '')
+    fl.DEFINE_boolean('use_save_steps', False, '')
     fl.DEFINE_integer('save_steps', 1, '')
     fl.DEFINE_integer('save_epochs', 1, '')
     fl.DEFINE_integer('keep_checkpoint_max', 5, '')
