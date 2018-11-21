@@ -192,9 +192,9 @@ def main(cf):
         cuda.select_device(0)
         cuda.close()
         os.system(
-            "python -u multiple_search_models.py --model_dir=%s --embedding_size=%d --data_dir=%s --model_name=%s --max_top_k=%d --shutdown_after_train=%d --gpu_no=%s" %
+            "python -u multiple_search_models.py --model_dir=%s --embedding_size=%d --data_dir=%s --model_name=%s --max_top_k=%d --shutdown_after_train=%d --gpu_no=%s --step_type=%s" %
             (cf.save_dir, cf.embedding_size, cf.data_dir, cf.model_name, cf.eval_max_top_k,
-             1 if cf.shutdown_after_train else 0, cf.gpu_no))
+             1 if cf.shutdown_after_train else 0, cf.gpu_no, "step" if cf.use_save_steps else "epoch"))
 
     else:
         if cf.shutdown_after_train:
