@@ -81,7 +81,7 @@ def main(cf):
     dataset = dataset.shuffle(cf.shuffle_buffer_size)
     dataset = dataset.repeat()
     dataset = dataset.batch(cf.sampling_buffer_size)
-    dataset = dataset.prefetch(cf.prefetch_buffer_size)
+    dataset = dataset.prefetch(cf.sampling_buffer_size)
 
     iterator = dataset.make_one_shot_iterator()
     # iterator = dataset.make_initializable_iterator()
@@ -293,7 +293,6 @@ if __name__ == '__main__':
     fl.DEFINE_integer('batch_size', 64, '')
     fl.DEFINE_integer('sampling_buffer_size', 1024, '')
     fl.DEFINE_integer('shuffle_buffer_size', 1024, '')
-    fl.DEFINE_integer('prefetch_buffer_size', 1024, '')
     fl.DEFINE_integer('train_image_channel', 3, '')
     fl.DEFINE_integer('train_image_size', 224, '')
     fl.DEFINE_integer('max_number_of_steps', None, '')
