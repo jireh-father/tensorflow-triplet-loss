@@ -37,9 +37,24 @@ def main(cf):
     else:
         attrs_ph = None
     # seed_ph = tf.placeholder(tf.int64, (), name="shuffle_seed")
-
+    files = glob.glob(os.path.join(cf.data_dir, "*_train*tfrecord"))
+    files.sort()
+    assert len(files) > 0
+    num_examples = util.count_records(files)
+    global_step = tf.Variable(0, trainable=False)
     loss_op, train_op = model_fn.build_model(images_ph, labels_ph, cf, attrs_ph, True, cf.use_attr_net,
-                                             cf.num_hidden_attr_net)
+                                             cf.num_hidden_attr_net, num_examples, global_step)
+
+    if cf.quantize_delay >= 0:
+        tf.contrib.quantize.create_training_graph(quant_delay=cf.quantize_delay)
+
+    # tf.variable_scope(scope, reuse=reuse, custom_getter=getter):
+    # if cf.moving_average_decay:
+    #     moving_average_variables = slim.get_model_variables()
+    #     variable_averages = tf.train.ExponentialMovingAverage(
+    #         FLAGS.moving_average_decay, global_step)
+    #     update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
+    #     update_ops.append(variable_averages.apply(moving_average_variables))
 
     def train_pre_process(example_proto):
         features = {"image/encoded": tf.FixedLenFeature((), tf.string, default_value=""),
@@ -51,11 +66,11 @@ def main(cf):
             features["image/attr"] = tf.VarLenFeature(dtype=tf.int64)
 
         parsed_features = tf.parse_single_example(example_proto, features)
-        image = tf.image.decode_jpeg(parsed_features["image/encoded"], 3)
+        image = tf.image.decode_jpeg(parsed_features["image/encoded"], cf.input_channel)
         image = tf.cast(image, tf.float32)
 
         image = tf.expand_dims(image, 0)
-        image = tf.image.resize_image_with_pad(image, 224, 224)
+        image = tf.image.resize_image_with_pad(image, cf.input_size, cf.input_size)
         # image = tf.image.resize_bilinear(image, [224, 224], align_corners=False)
         image = tf.squeeze(image, [0])
 
@@ -69,10 +84,6 @@ def main(cf):
         else:
             return image, label
 
-    files = glob.glob(os.path.join(cf.data_dir, "*_train*tfrecord"))
-    files.sort()
-    assert len(files) > 0
-    num_examples = util.count_records(files)
     steps_each_epoch = int(num_examples / cf.batch_size)
     if num_examples % cf.batch_size > 0:
         steps_each_epoch += 1
@@ -219,14 +230,14 @@ if __name__ == '__main__':
     fl.DEFINE_integer('input_size', 224, '')
     fl.DEFINE_integer('input_channel', 3, '')
     fl.DEFINE_integer('embedding_size', 128, '')
-    fl.DEFINE_string('preprocessing_name', 'default_preprocessing', '')
-    fl.DEFINE_integer('sampling_buffer_size', 64, '')
-    fl.DEFINE_integer('shuffle_buffer_size', 64, '')
+    fl.DEFINE_string('preprocessing_name', None, '')
+    fl.DEFINE_integer('sampling_buffer_size', 1024, '')
+    fl.DEFINE_integer('shuffle_buffer_size', 1024, '')
+    fl.DEFINE_integer('prefetch_buffer_size', 1024, '')
     fl.DEFINE_boolean('use_attr', False, '')
     fl.DEFINE_boolean('use_attr_net', False, '')
     fl.DEFINE_integer('num_hidden_attr_net', 1, '')
     fl.DEFINE_integer('attr_dim', 463, '')
-    fl.DEFINE_integer('prefetch_buffer_size', 64, '')
     fl.DEFINE_integer('preprocessing_num_parallel', 4, '')
     fl.DEFINE_string('save_dir', 'experiments/test', '')
     fl.DEFINE_string('triplet_strategy', 'batch_all', '')
@@ -247,7 +258,13 @@ if __name__ == '__main__':
 
     fl.DEFINE_integer('num_map_parallel', 4, '')
     fl.DEFINE_string('gpu_no', "0", '')
-    fl.DEFINE_float('weight_decay', 0.00004, '')
+
+    ######################
+    # Optimization Flags #
+    ######################
+
+    # fl.DEFINE_float('weight_decay', 0.00004, '')
+    fl.DEFINE_float('weight_decay', 0., '')
     fl.DEFINE_string('optimizer', 'rmsprop', '"adadelta", "adagrad", "adam",''"ftrl", "momentum", "sgd"  "rmsprop".')
     fl.DEFINE_float('adadelta_rho', 0.95, 'The decay rate for adadelta.')
     fl.DEFINE_float('adagrad_initial_accumulator_value', 0.1, 'Starting value for the AdaGrad accumulators.')
@@ -261,17 +278,19 @@ if __name__ == '__main__':
     fl.DEFINE_float('momentum', 0.9, 'The momentum for the MomentumOptimizer and RMSPropOptimizer.')
     fl.DEFINE_float('rmsprop_momentum', 0.9, 'Momentum.')
     fl.DEFINE_float('rmsprop_decay', 0.9, 'Decay term for RMSProp.')
+    fl.DEFINE_integer('quantize_delay', -1, 'Number of steps to start quantized training. Set to -1 would disable')
 
     #######################
     # Learning Rate Flags #
     #######################
     fl.DEFINE_string('learning_rate_decay_type', 'exponential', '"fixed", "exponential",'' or "polynomial"')
-    fl.DEFINE_float('learning_rate', 0.001, 'Initial learning rate.')
+    fl.DEFINE_float('learning_rate', 0.01, 'Initial learning rate.')
     fl.DEFINE_float('end_learning_rate', 0.0001, 'The minimal end learning rate used by a polynomial decay.')
     fl.DEFINE_float('label_smoothing', 0.0, 'The amount of label smoothing.')
     fl.DEFINE_float('learning_rate_decay_factor', 0.94, 'Learning rate decay factor.')
     fl.DEFINE_float('num_epochs_per_decay', 2.0, 'Number of epochs after which learning rate decays.')
-    fl.DEFINE_float('moving_average_decay', 0.9999, 'The decay to use for the moving average.')
+    # fl.DEFINE_float('moving_average_decay', None, 'The decay to use for the moving average.')
+    fl.DEFINE_float('moving_average_decay', 0.9, 'The decay to use for the moving average.')
 
     F = fl.FLAGS
     main(F)
