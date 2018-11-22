@@ -1,6 +1,6 @@
 import glob, os
 
-dir_list = glob.glob("D:/data/fashion/image_retrieval/images_for_tfrecord/deep_fashion_consumer/*")
+dir_list = glob.glob("D:/data/fashion/image_retrieval/deep_fashion/In-shop Clothes Retrieval Benchmark/split/*")
 
 for d in dir_list:
     prd_list = glob.glob(os.path.join(d, "*"))

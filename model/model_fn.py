@@ -6,8 +6,103 @@ from model.triplet_loss import batch_all_triplet_loss
 from model.triplet_loss import batch_hard_triplet_loss
 from model import nets_factory
 
+slim = tf.contrib.slim
 
-def build_model(is_training, images, params):
+
+def _configure_learning_rate(num_samples_per_epoch, global_step, cf):
+    """Configures the learning rate.
+  
+    Args:
+      num_samples_per_epoch: The number of samples in each epoch of training.
+      global_step: The global_step tensor.
+  
+    Returns:
+      A `Tensor` representing the learning rate.
+  
+    Raises:
+      ValueError: if
+    """
+    # Note: when num_clones is > 1, this will actually have each clone to go
+    # over each epoch cf.num_epochs_per_decay times. This is different
+    # behavior from sync replicas and is expected to produce different results.
+    decay_steps = int(num_samples_per_epoch * cf.num_epochs_per_decay /
+                      cf.batch_size)
+
+    if cf.learning_rate_decay_type == 'exponential':
+        return tf.train.exponential_decay(cf.learning_rate,
+                                          global_step,
+                                          decay_steps,
+                                          cf.learning_rate_decay_factor,
+                                          staircase=True,
+                                          name='exponential_decay_learning_rate')
+    elif cf.learning_rate_decay_type == 'fixed':
+        return tf.constant(cf.learning_rate, name='fixed_learning_rate')
+    elif cf.learning_rate_decay_type == 'polynomial':
+        return tf.train.polynomial_decay(cf.learning_rate,
+                                         global_step,
+                                         decay_steps,
+                                         cf.end_learning_rate,
+                                         power=1.0,
+                                         cycle=False,
+                                         name='polynomial_decay_learning_rate')
+    else:
+        raise ValueError('learning_rate_decay_type [%s] was not recognized' %
+                         cf.learning_rate_decay_type)
+
+
+def _configure_optimizer(learning_rate, cf):
+    """Configures the optimizer used for training.
+  
+    Args:
+      learning_rate: A scalar or `Tensor` learning rate.
+  
+    Returns:
+      An instance of an optimizer.
+  
+    Raises:
+      ValueError: if cf.optimizer is not recognized.
+    """
+    if cf.optimizer == 'adadelta':
+        optimizer = tf.train.AdadeltaOptimizer(
+            learning_rate,
+            rho=cf.adadelta_rho,
+            epsilon=cf.opt_epsilon)
+    elif cf.optimizer == 'adagrad':
+        optimizer = tf.train.AdagradOptimizer(
+            learning_rate,
+            initial_accumulator_value=cf.adagrad_initial_accumulator_value)
+    elif cf.optimizer == 'adam':
+        optimizer = tf.train.AdamOptimizer(
+            learning_rate,
+            beta1=cf.adam_beta1,
+            beta2=cf.adam_beta2,
+            epsilon=cf.opt_epsilon)
+    elif cf.optimizer == 'ftrl':
+        optimizer = tf.train.FtrlOptimizer(
+            learning_rate,
+            learning_rate_power=cf.ftrl_learning_rate_power,
+            initial_accumulator_value=cf.ftrl_initial_accumulator_value,
+            l1_regularization_strength=cf.ftrl_l1,
+            l2_regularization_strength=cf.ftrl_l2)
+    elif cf.optimizer == 'momentum':
+        optimizer = tf.train.MomentumOptimizer(
+            learning_rate,
+            momentum=cf.momentum,
+            name='Momentum')
+    elif cf.optimizer == 'rmsprop':
+        optimizer = tf.train.RMSPropOptimizer(
+            learning_rate,
+            decay=cf.rmsprop_decay,
+            momentum=cf.rmsprop_momentum,
+            epsilon=cf.opt_epsilon)
+    elif cf.optimizer == 'sgd':
+        optimizer = tf.train.GradientDescentOptimizer(learning_rate)
+    else:
+        raise ValueError('Optimizer [%s] was not recognized' % cf.optimizer)
+    return optimizer
+
+
+def build_model_default(is_training, images, params):
     """Compute outputs of the model (embeddings for triplet loss).
 
     Args:
@@ -54,8 +149,7 @@ def build_slim_model(is_training, images, params):
     Returns:
         output: (tf.Tensor) output of the model
     """
-    weight_decay = 0.
-    model_f = nets_factory.get_network_fn(params.model_name, int(params.embedding_size), weight_decay,
+    model_f = nets_factory.get_network_fn(params.model_name, int(params.embedding_size), params.weight_decay,
                                           is_training=is_training)
     out, _ = model_f(images)
 
@@ -86,7 +180,7 @@ def model_fn(features, labels, mode, params):
     with tf.variable_scope('model'):
         # Compute the embeddings with the model
         if params.model_name == "base_model":
-            embeddings = build_model(is_training, images, params)
+            embeddings = build_model_default(is_training, images, params)
         else:
             embeddings = build_slim_model(is_training, images, params)
     embedding_mean_norm = tf.reduce_mean(tf.norm(embeddings, axis=1))
@@ -142,7 +236,42 @@ def model_fn(features, labels, mode, params):
     return tf.estimator.EstimatorSpec(mode, loss=loss, train_op=train_op)
 
 
-def build_model(features, labels, cf, attrs=None, is_training=True, use_attr_net=False, num_hidden_attr_net=1):
+def train_op_fun(total_loss, global_step, num_examples, cf):
+    """Train model.
+   
+    Create an optimizer and apply to all trainable variables. Add moving
+    average for all trainable variables.
+   
+    Args:
+      total_loss: Total loss from loss().
+      global_step: Integer Variable counting the number of training steps
+        processed.
+    Returns:
+      train_op: op for training.
+    """
+    update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
+
+    if cf.moving_average_decay:
+        moving_average_variables = slim.get_model_variables()
+        variable_averages = tf.train.ExponentialMovingAverage(
+            cf.moving_average_decay, global_step)
+        update_ops.append(variable_averages.apply(moving_average_variables))
+
+    lr = _configure_learning_rate(num_examples, global_step, cf)
+    tf.summary.scalar('learning_rate', lr)
+    opt = _configure_optimizer(lr, cf)
+    grads = opt.compute_gradients(total_loss)
+    grad_updates = opt.apply_gradients(grads, global_step=global_step)
+    update_ops.append(grad_updates)
+    update_op = tf.group(*update_ops)
+    with tf.control_dependencies([update_op]):
+        train_op = tf.identity(total_loss, name='train_op')
+
+    return train_op
+
+
+def build_model(features, labels, cf, attrs=None, is_training=True, use_attr_net=False, num_hidden_attr_net=1,
+                num_examples=None, global_step=None):
     images = features
 
     # -----------------------------------------------------------
@@ -174,8 +303,12 @@ def build_model(features, labels, cf, attrs=None, is_training=True, use_attr_net
     elif cf.triplet_strategy == "batch_hard":
         loss = batch_hard_triplet_loss(labels, embeddings, margin=cf.margin, attrs=attrs,
                                        squared=cf.squared)
+
     else:
         raise ValueError("Triplet strategy not recognized: {}".format(cf.triplet_strategy))
+
+    vars = tf.trainable_variables()
+    loss += tf.add_n([tf.nn.l2_loss(v) for v in vars if 'bias' not in v.name]) * cf.weight_decay
 
     # -----------------------------------------------------------
     # METRICS AND SUMMARIES
@@ -194,15 +327,6 @@ def build_model(features, labels, cf, attrs=None, is_training=True, use_attr_net
 
     tf.summary.image('train_image', images, max_outputs=1)
 
-    # Define training step that minimizes the loss with the Adam optimizer
-    optimizer = tf.train.AdamOptimizer(cf.learning_rate, cf.adam_beta1, cf.adam_beta2,
-                                       epsilon=cf.opt_epsilon)
-    global_step = tf.train.get_global_step()
-    if cf.use_batch_norm:
-        # Add a dependency to update the moving mean and variance for batch normalization
-        with tf.control_dependencies(tf.get_collection(tf.GraphKeys.UPDATE_OPS)):
-            train_op = optimizer.minimize(loss, global_step=global_step)
-    else:
-        train_op = optimizer.minimize(loss, global_step=global_step)
+    train_op = train_op_fun(loss, global_step, num_examples, cf)
 
     return loss, train_op

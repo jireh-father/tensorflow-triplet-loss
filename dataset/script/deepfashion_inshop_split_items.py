@@ -10,28 +10,28 @@ df = pd.read_csv(
     "D:/data/fashion/image_retrieval/deep_fashion/In-shop Clothes Retrieval Benchmark/Eval/list_eval_partition_pd.txt",
     delim_whitespace=True)
 
+train_cnt = df[df.evaluation_status == "train"].item_id.nunique()
+test_cnt = df[df.evaluation_status == "query"].item_id.nunique()
+print(train_cnt)
+print(test_cnt)
 
-# train_cnt = df[df.evaluation_status == "train"].item_id.nunique()
-# test_cnt = df[df.evaluation_status == "query"].item_id.nunique()
-# print(train_cnt)
-# print(test_cnt)
-#
-# # avg img count each item : 6.47
-# a = df[df.evaluation_status == "train"].groupby(['item_id']).agg(['count']).mean()
-# # max img count : 162
-# b = df[df.evaluation_status == "train"].groupby(['item_id']).agg(['count']).max()
-# c = df[df.evaluation_status == "train"].groupby(['item_id']).agg(['count']).min()
-# # item_id group by count
-# df2 = df[df.evaluation_status == "train"].groupby(['item_id'])["item_id"].count()
-# total = 0
-# for n in df2:
-#     if n < 2:
-#         continue
-#     if n == 2:
-#         total += 1
-#         continue
-#     total += permutation(n, 2)
-# print(total)
+# avg img count each item : 6.47
+a = df[df.evaluation_status == "train"].groupby(['item_id']).agg(['count']).mean()
+# max img count : 162
+b = df[df.evaluation_status == "train"].groupby(['item_id']).agg(['count']).max()
+c = df[df.evaluation_status == "train"].groupby(['item_id']).agg(['count']).min()
+print(a, b, c)
+print("std", df[df.evaluation_status == "train"].groupby(['item_id']).agg(['count']).std())
+# item_id group by count
+df2 = df[df.evaluation_status == "train"].groupby(['item_id'])["item_id"].count()
+total = 0
+for n in df2:
+    if n < 2:
+        continue
+    if n == 2:
+        total += 1
+        continue
+    total += permutation(n, 2)
 
 
 def copy_files(df_tmp, image_dir, output_parent_dir):

@@ -29,6 +29,8 @@ parser.add_argument('--embedding_size', default=128,
                     help="Directory containing the dataset")
 parser.add_argument('--model_name', default="tfrecord",
                     help="Directory containing the dataset")
+parser.add_argument('--use_attr', default="0",
+                    help="Directory containing the dataset")
 parser.add_argument('--gpu_no', default="0",
                     help="Directory containing the dataset")
 if __name__ == '__main__':
@@ -36,7 +38,7 @@ if __name__ == '__main__':
 
     # Load the parameters from json file
     args = parser.parse_args()
-
+    args.use_attr = bool(int(args.use_attr))
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
     os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu_no
     print("CUDA Visible device", device_lib.list_local_devices())
@@ -44,17 +46,31 @@ if __name__ == '__main__':
 
     def train_pre_process(example_proto):
         features = {"image/encoded": tf.FixedLenFeature((), tf.string, default_value=""),
-                    "image/class/label": tf.FixedLenFeature((), tf.int64, default_value=0)}
+                    "image/class/label": tf.FixedLenFeature((), tf.int64, default_value=0),
+                    'image/height': tf.FixedLenFeature((), tf.int64, default_value=0),
+                    'image/width': tf.FixedLenFeature((), tf.int64, default_value=0)
+                    }
+        if args.use_attr:
+            features["image/attr"] = tf.VarLenFeature(dtype=tf.int64)
+
         parsed_features = tf.parse_single_example(example_proto, features)
         image = tf.image.decode_jpeg(parsed_features["image/encoded"], 3)
         image = tf.cast(image, tf.float32)
+
         image = tf.expand_dims(image, 0)
         image = tf.image.resize_image_with_pad(image, 224, 224)
+        # image = tf.image.resize_bilinear(image, [224, 224], align_corners=False)
         image = tf.squeeze(image, [0])
+
         image = tf.divide(image, 255.0)
         image = tf.subtract(image, 0.5)
         image = tf.multiply(image, 2.0)
-        return image, parsed_features["image/class/label"]
+
+        label = parsed_features["image/class/label"]
+        if args.use_attr:
+            return image, label, parsed_features["image/attr"]
+        else:
+            return image, label
 
 
     files_op = tf.placeholder(tf.string, shape=[None], name="files")
@@ -63,9 +79,13 @@ if __name__ == '__main__':
     dataset = dataset.map(train_pre_process)
     dataset = dataset.batch(num_examples_op)
     iterator = dataset.make_initializable_iterator()
-    images, labels = iterator.get_next()
+    if args.use_attr:
+        images, labels, attrs = iterator.get_next()
+    else:
+        images, labels = iterator.get_next()
+        attrs = None
 
-    embedding_op = model_fn.build_model(images, None, args, None, False)
+    embedding_op = model_fn.build_model(images, None, args, attrs, False)
 
     query_files = glob.glob(os.path.join(args.data_dir, "*_query*tfrecord"))
     query_files.sort()
@@ -93,8 +113,9 @@ if __name__ == '__main__':
         saver.restore(sess, tf.train.latest_checkpoint(args.model_dir))
 
     sess.run(iterator.initializer, feed_dict={files_op: query_files, num_examples_op: query_num_examples})
-    query_labels = sess.run(labels)
+    query_labels, query_attrs = sess.run([labels, attrs])
     print("query labels", query_labels.shape)
+    print("query attrs", query_attrs.shape)
     query_embeddings = np.zeros((query_num_examples, int(args.embedding_size)))
     steps = query_num_examples / embedding_batch_size
     if query_num_examples % embedding_batch_size > 0:
@@ -108,8 +129,9 @@ if __name__ == '__main__':
     print(query_embeddings.shape)
 
     sess.run(iterator.initializer, feed_dict={files_op: index_files, num_examples_op: index_num_examples})
-    index_labels = sess.run(labels)
+    index_labels, index_attrs = sess.run([labels, attrs])
     print("index labels", index_labels.shape)
+    print("index attrs", index_attrs.shape)
     index_embeddings = np.zeros((index_num_examples, int(args.embedding_size)))
     steps = index_num_examples / embedding_batch_size
     if index_num_examples % embedding_batch_size > 0:
@@ -129,3 +151,5 @@ if __name__ == '__main__':
     np.save(os.path.join(args.model_dir, "index_embeddings.npy"), index_embeddings)
     np.save(os.path.join(args.model_dir, "query_labels.npy"), query_labels)
     np.save(os.path.join(args.model_dir, "index_labels.npy"), index_labels)
+    np.save(os.path.join(args.model_dir, "query_attrs.npy"), query_attrs)
+    np.save(os.path.join(args.model_dir, "index_labels.npy"), index_attrs)

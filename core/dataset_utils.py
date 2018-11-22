@@ -67,15 +67,20 @@ def float_feature(values):
     return tf.train.Feature(float_list=tf.train.FloatList(value=values))
 
 
-def image_to_tfexample(image_data, image_format, height, width, class_id, class_name):
-    return tf.train.Example(features=tf.train.Features(feature={
+def image_to_tfexample(image_data, image_format, height, width, class_id, class_name, attr=None):
+    feature_dict = {
         'image/encoded': bytes_feature(image_data),
         'image/format': bytes_feature(image_format),
         'image/class/name': bytes_feature(class_name),
         'image/class/label': int64_feature(class_id),
         'image/height': int64_feature(height),
         'image/width': int64_feature(width),
-    }))
+        'image/attr': int64_feature(attr)
+    }
+
+    return tf.train.Example(features=tf.train.Features(feature=
+        feature_dict
+    ))
 
 
 def write_label_file(labels_to_class_names, dataset_dir,

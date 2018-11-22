@@ -16,15 +16,20 @@ parser.add_argument('--restore_epoch', default=None,
                     help="Directory containing the dataset")
 parser.add_argument('--gpu_no', default="0",
                     help="Directory containing the dataset")
+parser.add_argument('--use_attr', default="0",
+                    help="Directory containing the dataset")
 if __name__ == '__main__':
 
     args = parser.parse_args()
+    args.use_attr = bool(int(args.use_attr))
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
     os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu_no
     query_embeddings = np.load(os.path.join(args.model_dir, "query_embeddings.npy")).astype(np.float32)
     index_embeddings = np.load(os.path.join(args.model_dir, "index_embeddings.npy")).astype(np.float32)
     query_labels = np.load(os.path.join(args.model_dir, "query_labels.npy"))
     index_labels = np.load(os.path.join(args.model_dir, "index_labels.npy"))
+    query_attrs = np.load(os.path.join(args.model_dir, "query_attrs.npy"))
+    index_attrs = np.load(os.path.join(args.model_dir, "index_attrs.npy"))
 
     import faiss
 
