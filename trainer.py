@@ -341,11 +341,9 @@ if __name__ == '__main__':
     fl.DEFINE_string('learning_rate_decay_type', 'exponential', '"fixed", "exponential",'' or "polynomial"')
     fl.DEFINE_float('learning_rate', 0.01, 'Initial learning rate.')
     fl.DEFINE_float('end_learning_rate', 0.0001, 'The minimal end learning rate used by a polynomial decay.')
-    fl.DEFINE_float('label_smoothing', 0.0, 'The amount of label smoothing.')
     fl.DEFINE_float('learning_rate_decay_factor', 0.94, 'Learning rate decay factor.')
-    fl.DEFINE_float('max_number_of_epochs_per_decay', 2.0, 'Number of epochs after which learning rate decays.')
-    # fl.DEFINE_float('moving_average_decay', None, 'The decay to use for the moving average.')
-    fl.DEFINE_float('moving_average_decay', 0.9, 'The decay to use for the moving average.')
+    fl.DEFINE_float('num_epochs_per_decay', 2.0, 'Number of epochs after which learning rate decays.')
+    fl.DEFINE_float('moving_average_decay', None, 'The decay to use for the moving average.')
 
     #####################
     # Fine-Tuning Flags #
