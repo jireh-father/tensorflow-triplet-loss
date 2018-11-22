@@ -151,9 +151,9 @@ def build_slim_model(is_training, images, params):
     """
     model_f = nets_factory.get_network_fn(params.model_name, int(params.embedding_size), params.weight_decay,
                                           is_training=is_training)
-    out, _ = model_f(images)
+    out, end_points = model_f(images)
 
-    return out
+    return out, end_points
 
 
 def model_fn(features, labels, mode, params):
@@ -182,7 +182,7 @@ def model_fn(features, labels, mode, params):
         if params.model_name == "base_model":
             embeddings = build_model_default(is_training, images, params)
         else:
-            embeddings = build_slim_model(is_training, images, params)
+            embeddings, _ = build_slim_model(is_training, images, params)
     embedding_mean_norm = tf.reduce_mean(tf.norm(embeddings, axis=1))
 
     tf.summary.scalar("embedding_mean_norm", embedding_mean_norm)
@@ -221,7 +221,7 @@ def model_fn(features, labels, mode, params):
     if params.triplet_strategy == "batch_all":
         tf.summary.scalar('fraction_positive_triplets', fraction)
 
-    tf.summary.image('train_image', images, max_outputs=1)
+    tf.summary.image('train_image', images, max_outputs=10)
 
     # Define training step that minimizes the loss with the Adam optimizer
     optimizer = tf.train.AdamOptimizer(params.learning_rate)
@@ -234,6 +234,24 @@ def model_fn(features, labels, mode, params):
         train_op = optimizer.minimize(loss, global_step=global_step)
 
     return tf.estimator.EstimatorSpec(mode, loss=loss, train_op=train_op)
+
+
+def _get_variables_to_train(cf):
+    """Returns a list of variables to train.
+
+    Returns:
+      A list of variables to train by the optimizer.
+    """
+    if cf.trainable_scopes is None:
+        return tf.trainable_variables()
+    else:
+        scopes = [scope.strip() for scope in cf.trainable_scopes.split(',')]
+
+    variables_to_train = []
+    for scope in scopes:
+        variables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope)
+        variables_to_train.extend(variables)
+    return variables_to_train
 
 
 def train_op_fun(total_loss, global_step, num_examples, cf):
@@ -260,7 +278,8 @@ def train_op_fun(total_loss, global_step, num_examples, cf):
     lr = _configure_learning_rate(num_examples, global_step, cf)
     tf.summary.scalar('learning_rate', lr)
     opt = _configure_optimizer(lr, cf)
-    grads = opt.compute_gradients(total_loss)
+    variables_to_train = _get_variables_to_train(cf)
+    grads = opt.compute_gradients(total_loss, variables_to_train)
     grad_updates = opt.apply_gradients(grads, global_step=global_step)
     update_ops.append(grad_updates)
     update_op = tf.group(*update_ops)
@@ -278,7 +297,7 @@ def build_model(features, labels, cf, attrs=None, is_training=True, use_attr_net
     # MODEL: define the layers of the model
     with tf.variable_scope('model'):
         # Compute the embeddings with the model
-        embeddings = build_slim_model(is_training, images, cf)
+        embeddings, end_points = build_slim_model(is_training, images, cf)
         if attrs is not None and use_attr_net:
             hidden_step = int((cf.attr_dim - cf.embedding_size) / (num_hidden_attr_net + 1))
             for i in range(num_hidden_attr_net):
@@ -329,4 +348,4 @@ def build_model(features, labels, cf, attrs=None, is_training=True, use_attr_net
 
     train_op = train_op_fun(loss, global_step, num_examples, cf)
 
-    return loss, train_op
+    return loss, end_points, train_op
