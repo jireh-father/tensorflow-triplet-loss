@@ -10,6 +10,8 @@ import numpy as np
 from numba import cuda
 from preprocessing import preprocessing_factory
 
+slim = tf.contrib.slim
+
 
 def main(cf):
     tf.logging.set_verbosity(tf.logging.INFO)
@@ -24,38 +26,17 @@ def main(cf):
     for key in iterator:
         f.write("%s:%s\n" % (key, str(getattr(cf, key))))
 
-    # inputs_ph = tf.placeholder(tf.float32, [None, cf.input_size, cf.input_size, cf.input_channel],
+    # inputs_ph = tf.placeholder(tf.float32, [None, cf.train_image_size, cf.train_image_size, cf.train_image_channel],
     #                            name="inputs")
     # labels_ph = tf.placeholder(tf.int32, [None], name="labels")
     tf.set_random_seed(123)
-    images_ph = tf.placeholder(tf.float32, [cf.batch_size, cf.input_size, cf.input_size, cf.input_channel],
-                               name="inputs")
-    labels_ph = tf.placeholder(tf.int32, [cf.batch_size], name="labels")
-    if cf.use_attr:
-        attrs_ph = tf.placeholder(tf.float32, [cf.batch_size, cf.attr_dim], name="attrs")
-        if not cf.use_attr_net:
-            cf.embedding_size = cf.attr_dim
-    else:
-        attrs_ph = None
-    # seed_ph = tf.placeholder(tf.int64, (), name="shuffle_seed")
+
     files = glob.glob(os.path.join(cf.data_dir, "*_train*tfrecord"))
     files.sort()
     assert len(files) > 0
     num_examples = util.count_records(files)
     global_step = tf.Variable(0, trainable=False)
-    loss_op, train_op = model_fn.build_model(images_ph, labels_ph, cf, attrs_ph, True, cf.use_attr_net,
-                                             cf.num_hidden_attr_net, num_examples, global_step)
 
-    if cf.quantize_delay >= 0:
-        tf.contrib.quantize.create_training_graph(quant_delay=cf.quantize_delay)
-
-    # tf.variable_scope(scope, reuse=reuse, custom_getter=getter):
-    # if cf.moving_average_decay:
-    #     moving_average_variables = slim.get_model_variables()
-    #     variable_averages = tf.train.ExponentialMovingAverage(
-    #         FLAGS.moving_average_decay, global_step)
-    #     update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
-    #     update_ops.append(variable_averages.apply(moving_average_variables))
     image_preprocessing_fn = None
     if cf.preprocessing_name:
         image_preprocessing_fn = preprocessing_factory.get_preprocessing(cf.preprocessing_name, is_training=True)
@@ -70,15 +51,15 @@ def main(cf):
             features["image/attr"] = tf.VarLenFeature(dtype=tf.int64)
 
         parsed_features = tf.parse_single_example(example_proto, features)
-        image = tf.image.decode_jpeg(parsed_features["image/encoded"], cf.input_channel)
+        image = tf.image.decode_jpeg(parsed_features["image/encoded"], cf.train_image_channel)
 
         if image_preprocessing_fn is not None:
-            image = image_preprocessing_fn(image, cf.input_size, cf.input_size)
+            image = image_preprocessing_fn(image, cf.train_image_size, cf.train_image_size)
         else:
             image = tf.cast(image, tf.float32)
 
             image = tf.expand_dims(image, 0)
-            image = tf.image.resize_image_with_pad(image, cf.input_size, cf.input_size)
+            image = tf.image.resize_image_with_pad(image, cf.train_image_size, cf.train_image_size)
             # image = tf.image.resize_bilinear(image, [224, 224], align_corners=False)
             image = tf.squeeze(image, [0])
 
@@ -96,7 +77,7 @@ def main(cf):
     if num_examples % cf.batch_size > 0:
         steps_each_epoch += 1
     dataset = tf.data.TFRecordDataset(files)
-    dataset = dataset.map(train_pre_process, num_parallel_calls=cf.preprocessing_num_parallel)
+    dataset = dataset.map(train_pre_process, num_parallel_calls=cf.num_preprocessing_threads)
     dataset = dataset.shuffle(cf.shuffle_buffer_size)
     dataset = dataset.repeat()
     dataset = dataset.batch(cf.sampling_buffer_size)
@@ -109,23 +90,75 @@ def main(cf):
     else:
         images, labels = iterator.get_next()
 
+    images_ph = tf.placeholder(tf.float32,
+                               [cf.batch_size, cf.train_image_size, cf.train_image_size, cf.train_image_channel],
+                               name="inputs")
+    labels_ph = tf.placeholder(tf.int32, [cf.batch_size], name="labels")
+    if cf.use_attr:
+        attrs_ph = tf.placeholder(tf.float32, [cf.batch_size, cf.attr_dim], name="attrs")
+        if not cf.use_attr_net:
+            cf.embedding_size = cf.attr_dim
+    else:
+        attrs_ph = None
+    # seed_ph = tf.placeholder(tf.int64, (), name="shuffle_seed")
+
+    loss_op, end_points, train_op = model_fn.build_model(images_ph, labels_ph, cf, attrs_ph, True, cf.use_attr_net,
+                                                         cf.num_hidden_attr_net, num_examples, global_step)
+
+    summaries = set(tf.get_collection(tf.GraphKeys.SUMMARIES))
+
+    # Add summaries for end_points.
+    for end_point in end_points:
+        x = end_points[end_point]
+        summaries.add(tf.summary.histogram('activations/' + end_point, x))
+        summaries.add(tf.summary.scalar('sparsity/' + end_point,
+                                        tf.nn.zero_fraction(x)))
+
+    # Add summaries for losses.
+    for loss in tf.get_collection(tf.GraphKeys.LOSSES):
+        summaries.add(tf.summary.scalar('losses/%s' % loss.op.name, loss))
+
+    # Add summaries for variables.
+    for variable in slim.get_model_variables():
+        summaries.add(tf.summary.histogram(variable.op.name, variable))
+
+    summary_op = tf.summary.merge(list(summaries), name='summary_op')
+
+    if cf.quantize_delay >= 0:
+        tf.contrib.quantize.create_training_graph(quant_delay=cf.quantize_delay)
+
     tf_config = tf.ConfigProto()
     tf_config.gpu_options.allow_growth = True
     sess = tf.Session(config=tf_config)
     sess.run(tf.global_variables_initializer())
 
-    saver = tf.train.Saver(tf.global_variables(), max_to_keep=cf.keep_checkpoint_max)
+    summary_writer = tf.summary.FileWriter(cf.save_dir, sess.graph)
+
     epoch = 1
     steps = 1
     latest_epoch = 0
-    if os.path.isdir(cf.save_dir):
+    if os.path.isdir(cf.save_dir) and tf.train.latest_checkpoint(cf.save_dir) is not None:
         latest_checkpoint = tf.train.latest_checkpoint(cf.save_dir)
-        if latest_checkpoint is not None:
-            saver.restore(sess, tf.train.latest_checkpoint(cf.save_dir))
-            latest_epoch = int(os.path.basename(latest_checkpoint).split("-")[1])
-            epoch = latest_epoch + 1
-            cf.num_epochs += latest_epoch
-            f.write("%s:%s\n" % ("restore_checkpoint", latest_checkpoint))
+        exclusions = []
+        if cf.checkpoint_exclude_scopes:
+            exclusions = [scope.strip()
+                          for scope in cf.checkpoint_exclude_scopes.split(',')]
+        variables_to_restore = []
+        for var in slim.get_model_variables():
+            for exclusion in exclusions:
+                if var.op.name.startswith(exclusion):
+                    break
+            else:
+                variables_to_restore.append(var)
+
+        saver = tf.train.Saver(var_list=variables_to_restore, max_to_keep=cf.keep_checkpoint_max)
+        saver.restore(sess, tf.train.latest_checkpoint(cf.save_dir))
+        latest_epoch = int(os.path.basename(latest_checkpoint).split("-")[1])
+        epoch = latest_epoch + 1
+        cf.max_number_of_epochs += latest_epoch
+        f.write("%s:%s\n" % ("restore_checkpoint", latest_checkpoint))
+    else:
+        saver = tf.train.Saver(tf.global_variables(), max_to_keep=cf.keep_checkpoint_max)
     f.close()
     num_trained_images = 0
     last_saved_epoch = None
@@ -171,27 +204,34 @@ def main(cf):
             feed_dict = {images_ph: batch_images, labels_ph: batch_labels}
             if cf.use_attr:
                 feed_dict[attrs_ph] = batch_attrs
-            loss, _ = sess.run([loss_op, train_op], feed_dict=feed_dict)
+            if steps % cf.save_summaries_steps == 0:
+                loss, _, summary = sess.run([loss_op, train_op, summary_op], feed_dict=feed_dict)
+                summary_writer.add_summary(summary, global_step)
+            else:
+                loss, _ = sess.run([loss_op, train_op], feed_dict=feed_dict)
             train_time = time.time() - start
-            now = datetime.now().strftime('%Y/%m/%d %H:%M:%S')
-            print("[%s: %d epoch(%d/%d), %d steps] sampling time: %f, train time: %f, loss: %f" % (
-                now, epoch, steps % steps_each_epoch, steps_each_epoch, steps, sampling_time, train_time, loss))
+
+            if steps % cf.log_every_n_steps == 0:
+                now = datetime.now().strftime('%Y/%m/%d %H:%M:%S')
+                print("[%s: %d epoch(%d/%d), %d steps] sampling time: %f, train time: %f, loss: %f" % (
+                    now, epoch, steps % steps_each_epoch, steps_each_epoch, steps, sampling_time, train_time, loss))
             num_trained_images += cf.batch_size
 
             if cf.use_save_steps:
-                if steps % cf.save_steps == 0:
+                if steps % cf.save_interval_steps == 0:
                     saver.save(sess, cf.save_dir + "/model.ckpt", steps)
                     last_saved_step = steps
 
-            if cf.num_steps is not None and steps >= cf.num_steps:
+            if cf.max_number_of_steps is not None and steps >= cf.max_number_of_steps:
                 break
             steps += 1
 
             if num_trained_images >= num_examples:
-                if not cf.use_save_steps and cf.save_epochs >= 1 and (epoch - latest_epoch) % cf.save_epochs == 0:
+                if not cf.use_save_steps and cf.save_interval_epochs >= 1 and (
+                  epoch - latest_epoch) % cf.save_interval_epochs == 0:
                     saver.save(sess, cf.save_dir + "/model.ckpt", epoch)
                     last_saved_epoch = epoch
-                if epoch >= cf.num_epochs:
+                if epoch >= cf.max_number_of_epochs:
                     break
                 epoch += 1
                 num_trained_images = 0
@@ -228,44 +268,53 @@ def train():
 if __name__ == '__main__':
     fl = tf.app.flags
 
+    fl.DEFINE_string('save_dir', 'experiments/test', '')
+    fl.DEFINE_integer('num_preprocessing_threads', 4, '')
+    fl.DEFINE_integer('log_every_n_steps', 2, 'The frequency with which logs are print.')
+    fl.DEFINE_integer('save_summaries_steps', 10, '')
+    fl.DEFINE_boolean('use_save_steps', False, '')
+    fl.DEFINE_integer('save_interval_steps', 1000, '')
+    fl.DEFINE_integer('save_interval_epochs', 1, '')
+    fl.DEFINE_boolean('shutdown_after_train', False, '')
+    fl.DEFINE_boolean('eval_after_training', False, '')
+    fl.DEFINE_integer('eval_max_top_k', 50, '')
+
+    fl.DEFINE_string('gpu_no', "0", '')
+
+    #######################
+    # Dataset Flags #
+    #######################
+
     fl.DEFINE_string('data_dir',
                      'D:\data\\fashion\image_retrieval\deep_fashion\In-shop Clothes Retrieval Benchmark\\tfrecord',
                      '')
-    fl.DEFINE_string('sampling_name', 'pk', 'pk, random...')
     fl.DEFINE_string('model_name', 'alexnet_v2', '')
-    fl.DEFINE_integer('num_epochs', 10, '')
-    fl.DEFINE_integer('num_steps', None, '')
-    fl.DEFINE_integer('input_size', 224, '')
-    fl.DEFINE_integer('input_channel', 3, '')
-    fl.DEFINE_integer('embedding_size', 128, '')
     fl.DEFINE_string('preprocessing_name', "inception", '')
+    fl.DEFINE_integer('batch_size', 64, '')
     fl.DEFINE_integer('sampling_buffer_size', 1024, '')
     fl.DEFINE_integer('shuffle_buffer_size', 1024, '')
     fl.DEFINE_integer('prefetch_buffer_size', 1024, '')
+    fl.DEFINE_integer('train_image_channel', 3, '')
+    fl.DEFINE_integer('train_image_size', 224, '')
+    fl.DEFINE_integer('max_number_of_steps', None, '')
+    fl.DEFINE_integer('max_number_of_epochs', 10, '')
+    fl.DEFINE_integer('keep_checkpoint_max', 5, '')
+
+    #######################
+    # Triplet #
+    #######################
+    fl.DEFINE_integer('embedding_size', 128, '')
+    fl.DEFINE_string('triplet_strategy', 'batch_all', '')
+    fl.DEFINE_float('margin', 0.5, '')
+    fl.DEFINE_boolean('squared', False, '')
+
+    #######################
+    # Attribute data #
+    #######################
     fl.DEFINE_boolean('use_attr', False, '')
     fl.DEFINE_boolean('use_attr_net', False, '')
     fl.DEFINE_integer('num_hidden_attr_net', 1, '')
     fl.DEFINE_integer('attr_dim', 463, '')
-    fl.DEFINE_integer('preprocessing_num_parallel', 4, '')
-    fl.DEFINE_string('save_dir', 'experiments/test', '')
-    fl.DEFINE_string('triplet_strategy', 'batch_all', '')
-    fl.DEFINE_float('margin', 0.5, '')
-    fl.DEFINE_boolean('squared', False, '')
-    fl.DEFINE_boolean('use_batch_norm', False, '')
-    fl.DEFINE_string('data_mid_name', 'val', '')
-    fl.DEFINE_boolean('use_save_steps', False, '')
-    fl.DEFINE_integer('save_steps', 10000, '')
-    fl.DEFINE_integer('save_epochs', 1, '')
-    fl.DEFINE_integer('keep_checkpoint_max', 5, '')
-    fl.DEFINE_integer('batch_size', 64, '')
-    fl.DEFINE_integer('num_image_sampling', 4, '')
-    fl.DEFINE_integer('num_single_image_max', 4, '')
-    fl.DEFINE_boolean('eval_after_training', False, '')
-    fl.DEFINE_integer('eval_max_top_k', 50, '')
-    fl.DEFINE_boolean('shutdown_after_train', False, '')
-
-    fl.DEFINE_integer('num_map_parallel', 4, '')
-    fl.DEFINE_string('gpu_no', "0", '')
 
     ######################
     # Optimization Flags #
@@ -296,9 +345,22 @@ if __name__ == '__main__':
     fl.DEFINE_float('end_learning_rate', 0.0001, 'The minimal end learning rate used by a polynomial decay.')
     fl.DEFINE_float('label_smoothing', 0.0, 'The amount of label smoothing.')
     fl.DEFINE_float('learning_rate_decay_factor', 0.94, 'Learning rate decay factor.')
-    fl.DEFINE_float('num_epochs_per_decay', 2.0, 'Number of epochs after which learning rate decays.')
+    fl.DEFINE_float('max_number_of_epochs_per_decay', 2.0, 'Number of epochs after which learning rate decays.')
     # fl.DEFINE_float('moving_average_decay', None, 'The decay to use for the moving average.')
     fl.DEFINE_float('moving_average_decay', 0.9, 'The decay to use for the moving average.')
+
+    #####################
+    # Fine-Tuning Flags #
+    #####################
+    tf.app.flags.DEFINE_string(
+        'checkpoint_exclude_scopes', None,
+        'Comma-separated list of scopes of variables to exclude when restoring '
+        'from a checkpoint.')
+
+    tf.app.flags.DEFINE_string(
+        'trainable_scopes', None,
+        'Comma-separated list of scopes to filter the set of variables to train.'
+        'By default, None would train all the variables.')
 
     F = fl.FLAGS
     main(F)
