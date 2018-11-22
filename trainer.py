@@ -8,6 +8,7 @@ from datetime import datetime
 import time
 import numpy as np
 from numba import cuda
+from preprocessing import preprocessing_factory
 
 
 def main(cf):
@@ -55,6 +56,9 @@ def main(cf):
     #         FLAGS.moving_average_decay, global_step)
     #     update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
     #     update_ops.append(variable_averages.apply(moving_average_variables))
+    image_preprocessing_fn = None
+    if cf.preprocessing_name:
+        image_preprocessing_fn = preprocessing_factory.get_preprocessing(cf.preprocessing_name, is_training=True)
 
     def train_pre_process(example_proto):
         features = {"image/encoded": tf.FixedLenFeature((), tf.string, default_value=""),
@@ -67,16 +71,20 @@ def main(cf):
 
         parsed_features = tf.parse_single_example(example_proto, features)
         image = tf.image.decode_jpeg(parsed_features["image/encoded"], cf.input_channel)
-        image = tf.cast(image, tf.float32)
 
-        image = tf.expand_dims(image, 0)
-        image = tf.image.resize_image_with_pad(image, cf.input_size, cf.input_size)
-        # image = tf.image.resize_bilinear(image, [224, 224], align_corners=False)
-        image = tf.squeeze(image, [0])
+        if image_preprocessing_fn is not None:
+            image = image_preprocessing_fn(image, cf.input_size, cf.input_size)
+        else:
+            image = tf.cast(image, tf.float32)
 
-        image = tf.divide(image, 255.0)
-        image = tf.subtract(image, 0.5)
-        image = tf.multiply(image, 2.0)
+            image = tf.expand_dims(image, 0)
+            image = tf.image.resize_image_with_pad(image, cf.input_size, cf.input_size)
+            # image = tf.image.resize_bilinear(image, [224, 224], align_corners=False)
+            image = tf.squeeze(image, [0])
+
+            image = tf.divide(image, 255.0)
+            image = tf.subtract(image, 0.5)
+            image = tf.multiply(image, 2.0)
 
         label = parsed_features["image/class/label"]
         if cf.use_attr:
@@ -230,7 +238,7 @@ if __name__ == '__main__':
     fl.DEFINE_integer('input_size', 224, '')
     fl.DEFINE_integer('input_channel', 3, '')
     fl.DEFINE_integer('embedding_size', 128, '')
-    fl.DEFINE_string('preprocessing_name', None, '')
+    fl.DEFINE_string('preprocessing_name', "inception", '')
     fl.DEFINE_integer('sampling_buffer_size', 1024, '')
     fl.DEFINE_integer('shuffle_buffer_size', 1024, '')
     fl.DEFINE_integer('prefetch_buffer_size', 1024, '')
