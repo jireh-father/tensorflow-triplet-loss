@@ -319,8 +319,7 @@ if __name__ == '__main__':
     # Optimization Flags #
     ######################
 
-    # fl.DEFINE_float('weight_decay', 0.00004, '')
-    fl.DEFINE_float('weight_decay', 0., '')
+    fl.DEFINE_float('weight_decay', 0.00004, '')
     fl.DEFINE_string('optimizer', 'rmsprop', '"adadelta", "adagrad", "adam",''"ftrl", "momentum", "sgd"  "rmsprop".')
     fl.DEFINE_float('adadelta_rho', 0.95, 'The decay rate for adadelta.')
     fl.DEFINE_float('adagrad_initial_accumulator_value', 0.1, 'Starting value for the AdaGrad accumulators.')
