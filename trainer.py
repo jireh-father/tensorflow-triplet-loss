@@ -206,7 +206,7 @@ def main(cf):
                 feed_dict[attrs_ph] = batch_attrs
             if steps % cf.save_summaries_steps == 0:
                 loss, _, summary = sess.run([loss_op, train_op, summary_op], feed_dict=feed_dict)
-                summary_writer.add_summary(summary, global_step)
+                summary_writer.add_summary(summary, steps)
             else:
                 loss, _ = sess.run([loss_op, train_op], feed_dict=feed_dict)
             train_time = time.time() - start
@@ -291,8 +291,8 @@ if __name__ == '__main__':
     fl.DEFINE_string('model_name', 'alexnet_v2', '')
     fl.DEFINE_string('preprocessing_name', "inception", '')
     fl.DEFINE_integer('batch_size', 64, '')
-    fl.DEFINE_integer('sampling_buffer_size', 1024, '')
-    fl.DEFINE_integer('shuffle_buffer_size', 1024, '')
+    fl.DEFINE_integer('sampling_buffer_size', 150, '')
+    fl.DEFINE_integer('shuffle_buffer_size', 150, '')
     fl.DEFINE_integer('train_image_channel', 3, '')
     fl.DEFINE_integer('train_image_size', 224, '')
     fl.DEFINE_integer('max_number_of_steps', None, '')
