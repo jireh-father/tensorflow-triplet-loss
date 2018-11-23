@@ -113,9 +113,13 @@ if __name__ == '__main__':
         saver.restore(sess, tf.train.latest_checkpoint(args.model_dir))
 
     sess.run(iterator.initializer, feed_dict={files_op: query_files, num_examples_op: query_num_examples})
-    query_labels, query_attrs = sess.run([labels, attrs])
+    if attrs is None:
+        query_labels = sess.run(labels)
+    else:
+        query_labels, query_attrs = sess.run([labels, attrs])
+
+        print("query attrs", query_attrs.shape)
     print("query labels", query_labels.shape)
-    print("query attrs", query_attrs.shape)
     query_embeddings = np.zeros((query_num_examples, int(args.embedding_size)))
     steps = query_num_examples / embedding_batch_size
     if query_num_examples % embedding_batch_size > 0:
@@ -129,9 +133,13 @@ if __name__ == '__main__':
     print(query_embeddings.shape)
 
     sess.run(iterator.initializer, feed_dict={files_op: index_files, num_examples_op: index_num_examples})
-    index_labels, index_attrs = sess.run([labels, attrs])
+    if attrs is None:
+        index_labels = sess.run(labels)
+    else:
+        index_labels, index_attrs = sess.run([labels, attrs])
+
+        print("index attrs", index_attrs.shape)
     print("index labels", index_labels.shape)
-    print("index attrs", index_attrs.shape)
     index_embeddings = np.zeros((index_num_examples, int(args.embedding_size)))
     steps = index_num_examples / embedding_batch_size
     if index_num_examples % embedding_batch_size > 0:
@@ -151,5 +159,6 @@ if __name__ == '__main__':
     np.save(os.path.join(args.model_dir, "index_embeddings.npy"), index_embeddings)
     np.save(os.path.join(args.model_dir, "query_labels.npy"), query_labels)
     np.save(os.path.join(args.model_dir, "index_labels.npy"), index_labels)
-    np.save(os.path.join(args.model_dir, "query_attrs.npy"), query_attrs)
-    np.save(os.path.join(args.model_dir, "index_labels.npy"), index_attrs)
+    if attrs is not None:
+        np.save(os.path.join(args.model_dir, "query_attrs.npy"), query_attrs)
+        np.save(os.path.join(args.model_dir, "index_attrs.npy"), index_attrs)
