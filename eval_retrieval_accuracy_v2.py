@@ -27,6 +27,8 @@ parser.add_argument('--restore_epoch', default=None,
                     help="Directory containing the dataset")
 parser.add_argument('--embedding_size', default=128,
                     help="Directory containing the dataset")
+parser.add_argument('--image_size', default=128,
+                    help="Directory containing the dataset")
 parser.add_argument('--model_name', default="tfrecord",
                     help="Directory containing the dataset")
 parser.add_argument('--use_attr', default="0",
@@ -58,7 +60,7 @@ if __name__ == '__main__':
         image = tf.cast(image, tf.float32)
 
         image = tf.expand_dims(image, 0)
-        image = tf.image.resize_image_with_pad(image, 224, 224)
+        image = tf.image.resize_image_with_pad(image, int(args.image_size), int(args.image_size))
         # image = tf.image.resize_bilinear(image, [224, 224], align_corners=False)
         image = tf.squeeze(image, [0])
 
