@@ -252,9 +252,10 @@ def main(cf):
         cuda.select_device(0)
         cuda.close()
         os.system(
-            "python -u multiple_search_models.py --model_dir=%s --embedding_size=%d --data_dir=%s --model_name=%s --max_top_k=%d --shutdown_after_train=%d --gpu_no=%s --step_type=%s" %
+            "python -u multiple_search_models.py --model_dir=%s --embedding_size=%d --data_dir=%s --model_name=%s --max_top_k=%d --shutdown_after_train=%d --gpu_no=%s --step_type=%s --image_size=%s" %
             (cf.save_dir, cf.embedding_size, cf.data_dir, cf.model_name, cf.eval_max_top_k,
-             1 if cf.shutdown_after_train else 0, cf.gpu_no, "step" if cf.use_save_steps else "epoch"))
+             1 if cf.shutdown_after_train else 0, cf.gpu_no, "step" if cf.use_save_steps else "epoch",
+             int(cf.train_image_size)))
 
     else:
         if cf.shutdown_after_train:
@@ -286,13 +287,13 @@ if __name__ == '__main__':
     #######################
 
     fl.DEFINE_string('data_dir',
-                     'D:\data\\fashion\image_retrieval\deep_fashion\In-shop Clothes Retrieval Benchmark\\tfrecord',
+                     'D:\data\\fashion\image_retrieval\deep_fashion\In-shop Clothes Retrieval Benchmark\\tfrecord_with_attr',
                      '')
     fl.DEFINE_string('model_name', 'alexnet_v2', '')
     fl.DEFINE_string('preprocessing_name', "inception", '')
     fl.DEFINE_integer('batch_size', 64, '')
     fl.DEFINE_integer('sampling_buffer_size', 150, '')
-    fl.DEFINE_integer('shuffle_buffer_size', 150, '')
+    fl.DEFINE_integer('shuffle_buffer_size', 430, '')
     fl.DEFINE_integer('train_image_channel', 3, '')
     fl.DEFINE_integer('train_image_size', 224, '')
     fl.DEFINE_integer('max_number_of_steps', None, '')
