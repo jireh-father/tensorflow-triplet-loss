@@ -35,6 +35,8 @@ parser.add_argument('--use_attr', default="0",
                     help="Directory containing the dataset")
 parser.add_argument('--gpu_no', default="0",
                     help="Directory containing the dataset")
+parser.add_argument('--eval_batch_size', 256,
+                    help="Directory containing the dataset")
 if __name__ == '__main__':
     tf.logging.set_verbosity(tf.logging.INFO)
 
@@ -98,7 +100,7 @@ if __name__ == '__main__':
     assert len(index_files) > 0
     index_num_examples = util.count_records(index_files)
 
-    embedding_batch_size = 512
+    embedding_batch_size = int(args.eval_batch_size)
 
     tf_config = tf.ConfigProto()
     tf_config.gpu_options.allow_growth = True
