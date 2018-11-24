@@ -321,9 +321,10 @@ def build_model(features, labels, cf, attrs=None, is_training=True, use_attr_net
     # Define triplet loss
     if cf.triplet_strategy == "batch_all":
         loss, fraction = batch_all_triplet_loss(labels, embeddings, margin=cf.margin, attrs=attrs,
-                                                squared=cf.squared)
+                                                attr_weight=cf.attr_loss_weight, squared=cf.squared)
     elif cf.triplet_strategy == "batch_hard":
         loss = batch_hard_triplet_loss(labels, embeddings, margin=cf.margin, attrs=attrs,
+                                       attr_weight=cf.attr_loss_weight,
                                        squared=cf.squared)
 
     else:

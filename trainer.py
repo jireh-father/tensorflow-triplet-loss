@@ -294,7 +294,7 @@ if __name__ == '__main__':
     #######################
 
     fl.DEFINE_string('data_dir',
-                     'D:\data\\fashion\image_retrieval\deep_fashion\In-shop Clothes Retrieval Benchmark\\tfrecord',
+                     'D:\data\\fashion\image_retrieval\deep_fashion\In-shop Clothes Retrieval Benchmark\\tfrecord_with_attr_v2',
                      '')
     # fl.DEFINE_string('data_dir',
     #                  "D:\data\\fashion\image_retrieval\cafe24product\\tfrecord_with_attr",
@@ -326,6 +326,7 @@ if __name__ == '__main__':
     fl.DEFINE_boolean('use_attr_net', False, '')
     fl.DEFINE_integer('num_hidden_attr_net', 1, '')
     fl.DEFINE_integer('attr_dim', 463, '')
+    fl.DEFINE_integer('attr_loss_weight', 1., '')
 
     ######################
     # Optimization Flags #
