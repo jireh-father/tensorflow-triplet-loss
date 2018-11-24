@@ -252,10 +252,10 @@ def main(cf):
         cuda.select_device(0)
         cuda.close()
         os.system(
-            "python -u multiple_search_models.py --model_dir=%s --embedding_size=%d --data_dir=%s --model_name=%s --max_top_k=%d --shutdown_after_train=%d --gpu_no=%s --step_type=%s --image_size=%s" %
+            "python -u multiple_search_models.py --model_dir=%s --embedding_size=%d --data_dir=%s --model_name=%s --max_top_k=%d --shutdown_after_train=%d --gpu_no=%s --step_type=%s --image_size=%s --eval_batch_size=%d" %
             (cf.save_dir, cf.embedding_size, cf.data_dir, cf.model_name, cf.eval_max_top_k,
              1 if cf.shutdown_after_train else 0, cf.gpu_no, "step" if cf.use_save_steps else "epoch",
-             int(cf.train_image_size)))
+             cf.train_image_size, cf.eval_batch_size))
 
     else:
         if cf.shutdown_after_train:
@@ -279,6 +279,7 @@ if __name__ == '__main__':
     fl.DEFINE_boolean('shutdown_after_train', False, '')
     fl.DEFINE_boolean('eval_after_training', False, '')
     fl.DEFINE_integer('eval_max_top_k', 50, '')
+    fl.DEFINE_integer('eval_batch_size', 256, '')
 
     fl.DEFINE_string('gpu_no', "0", '')
 
