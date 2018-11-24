@@ -17,6 +17,7 @@ import util
 from model import model_fn
 import glob
 from tensorflow.python.client import device_lib
+from preprocessing import preprocessing_factory
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--model_dir', default='experiments/alexnet',
@@ -37,6 +38,8 @@ parser.add_argument('--gpu_no', default="0",
                     help="Directory containing the dataset")
 parser.add_argument('--eval_batch_size', default=256,
                     help="Directory containing the dataset")
+parser.add_argument('--preprocessing_name', default='None',
+                    help="Directory containing the dataset")
 if __name__ == '__main__':
     tf.logging.set_verbosity(tf.logging.INFO)
 
@@ -46,6 +49,12 @@ if __name__ == '__main__':
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
     os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu_no
     print("CUDA Visible device", device_lib.list_local_devices())
+
+    image_preprocessing_fn = None
+    if args.preprocessing_name != 'None':
+        image_preprocessing_fn = preprocessing_factory.get_preprocessing(args.preprocessing_name, is_training=False)
+
+    args.image_size = int(args.image_size)
 
 
     def train_pre_process(example_proto):
@@ -59,16 +68,20 @@ if __name__ == '__main__':
 
         parsed_features = tf.parse_single_example(example_proto, features)
         image = tf.image.decode_jpeg(parsed_features["image/encoded"], 3)
-        image = tf.cast(image, tf.float32)
 
-        image = tf.expand_dims(image, 0)
-        image = tf.image.resize_image_with_pad(image, int(args.image_size), int(args.image_size))
-        # image = tf.image.resize_bilinear(image, [224, 224], align_corners=False)
-        image = tf.squeeze(image, [0])
+        if image_preprocessing_fn is not None:
+            image = image_preprocessing_fn(image, args.image_size, args.image_size)
+        else:
+            image = tf.cast(image, tf.float32)
 
-        image = tf.divide(image, 255.0)
-        image = tf.subtract(image, 0.5)
-        image = tf.multiply(image, 2.0)
+            image = tf.expand_dims(image, 0)
+            image = tf.image.resize_image_with_pad(image, args.image_size, args.image_size)
+            # image = tf.image.resize_bilinear(image, [224, 224], align_corners=False)
+            image = tf.squeeze(image, [0])
+
+            image = tf.divide(image, 255.0)
+            image = tf.subtract(image, 0.5)
+            image = tf.multiply(image, 2.0)
 
         label = parsed_features["image/class/label"]
         if args.use_attr:
@@ -125,7 +138,7 @@ if __name__ == '__main__':
         print("query attrs", query_attrs.shape)
     print("query labels", query_labels.shape)
     query_embeddings = np.zeros((query_num_examples, int(args.embedding_size)))
-    steps = query_num_examples / embedding_batch_size
+    steps = int(query_num_examples / embedding_batch_size)
     if query_num_examples % embedding_batch_size > 0:
         steps += 1
     sess.run(iterator.initializer, feed_dict={files_op: query_files, num_examples_op: embedding_batch_size})
@@ -145,7 +158,7 @@ if __name__ == '__main__':
         print("index attrs", index_attrs.shape)
     print("index labels", index_labels.shape)
     index_embeddings = np.zeros((index_num_examples, int(args.embedding_size)))
-    steps = index_num_examples / embedding_batch_size
+    steps = int(index_num_examples / embedding_batch_size)
     if index_num_examples % embedding_batch_size > 0:
         steps += 1
     sess.run(iterator.initializer, feed_dict={files_op: index_files, num_examples_op: embedding_batch_size})

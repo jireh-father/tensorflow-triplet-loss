@@ -104,7 +104,7 @@ def main(cf):
 
     loss_op, end_points, train_op = model_fn.build_model(images_ph, labels_ph, cf, attrs_ph, True, cf.use_attr_net,
                                                          cf.num_hidden_attr_net, num_examples, global_step)
-
+    vars = tf.trainable_variables()
     summaries = set(tf.get_collection(tf.GraphKeys.SUMMARIES))
 
     # Add summaries for end_points.
@@ -137,8 +137,9 @@ def main(cf):
     epoch = 1
     steps = 1
     latest_epoch = 0
-    if os.path.isdir(cf.save_dir) and tf.train.latest_checkpoint(cf.save_dir) is not None:
-        latest_checkpoint = tf.train.latest_checkpoint(cf.save_dir)
+    if cf.checkpoint_path is not None and (os.path.isfile(cf.checkpoint_path) or (
+      os.path.isdir(cf.checkpoint_path) and tf.train.latest_checkpoint(cf.checkpoint_path) is not None)):
+        latest_checkpoint = tf.train.latest_checkpoint(cf.checkpoint_path)
         exclusions = []
         if cf.checkpoint_exclude_scopes:
             exclusions = [scope.strip()
@@ -152,7 +153,11 @@ def main(cf):
                 variables_to_restore.append(var)
 
         saver = tf.train.Saver(var_list=variables_to_restore, max_to_keep=cf.keep_checkpoint_max)
-        saver.restore(sess, tf.train.latest_checkpoint(cf.save_dir))
+        if os.path.isdir(cf.checkpoint_path) and tf.train.latest_checkpoint(cf.checkpoint_path) is not None:
+            cp = tf.train.latest_checkpoint(cf.checkpoint_path)
+        else:
+            cp = cf.checkpoint_path
+        saver.restore(sess, cp)
         latest_epoch = int(os.path.basename(latest_checkpoint).split("-")[1])
         epoch = latest_epoch + 1
         cf.max_number_of_epochs += latest_epoch
@@ -240,10 +245,10 @@ def main(cf):
             break
 
     if cf.use_save_steps:
-        if last_saved_step < steps:
+        if last_saved_step is None or last_saved_step < steps:
             saver.save(sess, cf.save_dir + "/model.ckpt", steps)
     else:
-        if last_saved_epoch < epoch:
+        if last_saved_epoch is None or last_saved_epoch < epoch:
             saver.save(sess, cf.save_dir + "/model.ckpt", epoch)
 
     sess.close()
@@ -251,11 +256,12 @@ def main(cf):
     if cf.eval_after_training:
         cuda.select_device(0)
         cuda.close()
-        os.system(
-            "python -u multiple_search_models.py --model_dir=%s --embedding_size=%d --data_dir=%s --model_name=%s --max_top_k=%d --shutdown_after_train=%d --gpu_no=%s --step_type=%s --image_size=%s --eval_batch_size=%d" %
-            (cf.save_dir, cf.embedding_size, cf.data_dir, cf.model_name, cf.eval_max_top_k,
-             1 if cf.shutdown_after_train else 0, cf.gpu_no, "step" if cf.use_save_steps else "epoch",
-             cf.train_image_size, cf.eval_batch_size))
+        eval_cmd = 'python -u multiple_search_models.py --model_dir="%s" --embedding_size=%d --data_dir="%s" --model_name=%s --max_top_k=%d --shutdown_after_train=%d --gpu_no=%s --step_type=%s --image_size=%s --eval_batch_size=%d --preprocessing_name=%s' % (
+            cf.save_dir, cf.embedding_size, cf.data_dir, cf.model_name, cf.eval_max_top_k,
+            1 if cf.shutdown_after_train else 0, cf.gpu_no, "step" if cf.use_save_steps else "epoch",
+            cf.train_image_size, cf.eval_batch_size, cf.preprocessing_name)
+        print(eval_cmd)
+        os.system(eval_cmd)
 
     else:
         if cf.shutdown_after_train:
@@ -271,15 +277,15 @@ if __name__ == '__main__':
 
     fl.DEFINE_string('save_dir', 'experiments/test', '')
     fl.DEFINE_integer('num_preprocessing_threads', 4, '')
-    fl.DEFINE_integer('log_every_n_steps', 2, 'The frequency with which logs are print.')
+    fl.DEFINE_integer('log_every_n_steps', 10, 'The frequency with which logs are print.')
     fl.DEFINE_integer('save_summaries_steps', 10, '')
     fl.DEFINE_boolean('use_save_steps', False, '')
-    fl.DEFINE_integer('save_interval_steps', 1000, '')
-    fl.DEFINE_integer('save_interval_epochs', 1, '')
+    fl.DEFINE_integer('save_interval_steps', 10000, '')
+    fl.DEFINE_integer('save_interval_epochs', 2, '')
     fl.DEFINE_boolean('shutdown_after_train', False, '')
-    fl.DEFINE_boolean('eval_after_training', False, '')
+    fl.DEFINE_boolean('eval_after_training', True, '')
     fl.DEFINE_integer('eval_max_top_k', 50, '')
-    fl.DEFINE_integer('eval_batch_size', 256, '')
+    fl.DEFINE_integer('eval_batch_size', 128, '')
 
     fl.DEFINE_string('gpu_no', "0", '')
 
@@ -288,16 +294,20 @@ if __name__ == '__main__':
     #######################
 
     fl.DEFINE_string('data_dir',
-                     'D:\data\\fashion\image_retrieval\deep_fashion\In-shop Clothes Retrieval Benchmark\\tfrecord_with_attr',
+                     'D:\data\\fashion\image_retrieval\deep_fashion\In-shop Clothes Retrieval Benchmark\\tfrecord',
                      '')
+    # fl.DEFINE_string('data_dir',
+    #                  "D:\data\\fashion\image_retrieval\cafe24product\\tfrecord_with_attr",
+    #                  '')
+
     fl.DEFINE_string('model_name', 'alexnet_v2', '')
     fl.DEFINE_string('preprocessing_name', "inception", '')
-    fl.DEFINE_integer('batch_size', 64, '')
-    fl.DEFINE_integer('sampling_buffer_size', 150, '')
-    fl.DEFINE_integer('shuffle_buffer_size', 430, '')
+    fl.DEFINE_integer('batch_size', 32, '')
+    fl.DEFINE_integer('sampling_buffer_size', 128, '')
+    fl.DEFINE_integer('shuffle_buffer_size', 128, '')
     fl.DEFINE_integer('train_image_channel', 3, '')
     fl.DEFINE_integer('train_image_size', 224, '')
-    fl.DEFINE_integer('max_number_of_steps', None, '')
+    fl.DEFINE_integer('max_number_of_steps', 100000, '')
     fl.DEFINE_integer('max_number_of_epochs', 10, '')
     fl.DEFINE_integer('keep_checkpoint_max', 5, '')
 
@@ -305,7 +315,7 @@ if __name__ == '__main__':
     # Triplet #
     #######################
     fl.DEFINE_integer('embedding_size', 128, '')
-    fl.DEFINE_string('triplet_strategy', 'batch_all', '')
+    fl.DEFINE_string('triplet_strategy', 'batch_hard', '')
     fl.DEFINE_float('margin', 0.5, '')
     fl.DEFINE_boolean('squared', False, '')
 
@@ -350,15 +360,17 @@ if __name__ == '__main__':
     #####################
     # Fine-Tuning Flags #
     #####################
-    tf.app.flags.DEFINE_string(
-        'checkpoint_exclude_scopes', None,
-        'Comma-separated list of scopes of variables to exclude when restoring '
-        'from a checkpoint.')
+    # fl.DEFINE_string('checkpoint_path', "D:/pretrained/inception_resnet_v2_2016_08_30.ckpt", '')
+    fl.DEFINE_string('checkpoint_path', None, '')
+    fl.DEFINE_string('checkpoint_exclude_scopes', None,
+                     'Comma-separated list of scopes of variables to exclude when restoring '
+                     'from a checkpoint.')
+    # fl.DEFINE_string('checkpoint_exclude_scopes', "model/InceptionResnetV2/Logits,model/InceptionResnetV2/AuxLogits",
+    #                  'Comma-separated list of scopes of variables to exclude when restoring '
+    #                  'from a checkpoint.')
 
-    tf.app.flags.DEFINE_string(
-        'trainable_scopes', None,
-        'Comma-separated list of scopes to filter the set of variables to train.'
-        'By default, None would train all the variables.')
+    fl.DEFINE_string('trainable_scopes', None, 'Comma-separated list of scopes to filter the set of variables to train.'
+                                               'By default, None would train all the variables.')
 
     F = fl.FLAGS
     main(F)
