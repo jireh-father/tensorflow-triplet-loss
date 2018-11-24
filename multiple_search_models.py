@@ -23,6 +23,8 @@ parser.add_argument('--step_type', default="epoch",
                     help="Directory containing the dataset")
 parser.add_argument('--image_size', default=128,
                     help="Directory containing the dataset")
+parser.add_argument('--eval_batch_size', default=256,
+                    help="Directory containing the dataset")
 
 if __name__ == '__main__':
     args = parser.parse_args()
@@ -33,9 +35,9 @@ if __name__ == '__main__':
         model_epochs = [int(e) for e in args.epoch_list.split(",")]
     model_epochs.sort()
     for i in model_epochs:
-        eval_cmd = "python eval_retrieval_accuracy_v2.py --model_dir=%s --data_dir=%s --restore_epoch=%d --embedding_size=%d --model_name=%s --gpu_no=%s --image_size=%d" % (
+        eval_cmd = "python eval_retrieval_accuracy_v2.py --model_dir=%s --data_dir=%s --restore_epoch=%d --embedding_size=%d --model_name=%s --gpu_no=%s --image_size=%d --eval_batch_size=%d" % (
             args.model_dir, args.data_dir, i, int(args.embedding_size), args.model_name, args.gpu_no, int(
-                args.image_size))
+                args.image_size), int(args.eval_batch_size))
         print(eval_cmd)
         os.system(eval_cmd)
         search_cmd = "python search_faiss.py  --model_dir=%s --data_dir=%s --restore_epoch=%d --embedding_size=%d --max_top_k=%d --gpu_no=%s" % (
