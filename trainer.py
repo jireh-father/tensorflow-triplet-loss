@@ -326,7 +326,7 @@ if __name__ == '__main__':
     fl.DEFINE_boolean('use_attr_net', False, '')
     fl.DEFINE_integer('num_hidden_attr_net', 1, '')
     fl.DEFINE_integer('attr_dim', 463, '')
-    fl.DEFINE_float('attr_loss_weight', 1., '')
+    fl.DEFINE_float('attr_loss_weight', 1.0, '')
 
     ######################
     # Optimization Flags #
