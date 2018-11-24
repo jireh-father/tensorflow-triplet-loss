@@ -35,7 +35,7 @@ parser.add_argument('--use_attr', default="0",
                     help="Directory containing the dataset")
 parser.add_argument('--gpu_no', default="0",
                     help="Directory containing the dataset")
-parser.add_argument('--eval_batch_size', 256,
+parser.add_argument('--eval_batch_size', default="256",
                     help="Directory containing the dataset")
 if __name__ == '__main__':
     tf.logging.set_verbosity(tf.logging.INFO)
