@@ -68,7 +68,7 @@ if __name__ == '__main__':
     if args.epoch_list is not None:
         epochs_str = "-".join(model_epochs)
     best_acc_file = open(os.path.join(args.model_dir, "search_result",
-                                      "accuracy_graph-date[%s]_model[%s]_log[%s]_data[%s]_embed[%d]_maxtopk[%d]_epochs[%s]_gpuno[%s].png" % (
+                                      "best_accuracy-date[%s]_model[%s]_log[%s]_data[%s]_embed[%d]_maxtopk[%d]_epochs[%s]_gpuno[%s].txt" % (
                                           now, args.model_name, os.path.basename(args.model_dir),
                                           os.path.basename(args.data_dir), int(args.embedding_size),
                                           int(args.max_top_k),
