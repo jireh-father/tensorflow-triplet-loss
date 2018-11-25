@@ -51,8 +51,13 @@ if __name__ == '__main__':
 
     result_path = os.path.join(args.model_dir, "search_result")
     legends = []
+    max_acc = 0
+    max_idx = None
     for i in model_epochs:
         accuracies = json.load(open(os.path.join(result_path, "%d_accuracies.json" % i)))
+        if max_acc < accuracies[-1]:
+            max_acc = accuracies[-1]
+            max_idx = i
         plt.plot(accuracies)
         legends.append("%s %d" % (args.step_type, i))
     plt.legend(legends, loc='upper left')
@@ -62,7 +67,14 @@ if __name__ == '__main__':
     epochs_str = "all"
     if args.epoch_list is not None:
         epochs_str = "-".join(model_epochs)
-
+    best_acc_file = open(os.path.join(args.model_dir, "search_result",
+                                      "accuracy_graph-date[%s]_model[%s]_log[%s]_data[%s]_embed[%d]_maxtopk[%d]_epochs[%s]_gpuno[%s].png" % (
+                                          now, args.model_name, os.path.basename(args.model_dir),
+                                          os.path.basename(args.data_dir), int(args.embedding_size),
+                                          int(args.max_top_k),
+                                          epochs_str, args.gpu_no)), mode="w+")
+    best_acc_file.write("best accuracy: %f, best accuracy epoch: %d" % (max_acc, max_idx))
+    best_acc_file.close()
     plt.savefig(os.path.join(args.model_dir, "search_result",
                              "accuracy_graph-date[%s]_model[%s]_log[%s]_data[%s]_embed[%d]_maxtopk[%d]_epochs[%s]_gpuno[%s].png" % (
                                  now, args.model_name, os.path.basename(args.model_dir),
