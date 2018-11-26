@@ -7,6 +7,7 @@ import shutil
 import glob
 from multiprocessing import Process
 import numpy as np
+import random
 
 
 def _get_dataset_filename(dataset_name, output_dir, phase_name, shard_id, num_shards):
@@ -45,7 +46,7 @@ def _get_filenames_and_classes(image_dir):
                 # path = os.path.join(directory, filename)
                 photo_filenames.append(path)
 
-    return sorted(photo_filenames), sorted(class_names)
+    return photo_filenames, sorted(class_names)
 
 
 class ImageReader(object):
@@ -97,7 +98,7 @@ def _convert_dataset(dataset_name, phase_name, filenames, class_names_to_ids, ou
                     start_ndx = shard_id * num_per_shard
                     end_ndx = min((shard_id + 1) * num_per_shard, len(filenames))
                     for i in range(start_ndx, end_ndx):
-                        sys.stdout.write('\r>> Converting image %d/%d shard %d, %s' % (
+                        sys.stdout.write('/r>> Converting image %d/%d shard %d, %s' % (
                             i + 1, len(filenames), shard_id, filenames[i]))
                         sys.stdout.flush()
 
@@ -123,7 +124,7 @@ def _convert_dataset(dataset_name, phase_name, filenames, class_names_to_ids, ou
                                                                    attr)
                         tfrecord_writer.write(example.SerializeToString())
 
-    sys.stdout.write('\n')
+    sys.stdout.write('/n')
     sys.stdout.flush()
 
 
@@ -151,7 +152,9 @@ def make_tfrecords(dataset_name, phase_name, image_dir, output_dir, num_shards, 
     if not os.path.isdir(output_dir):
         os.makedirs(output_dir)
 
+    random.seed(0)
     photo_filenames, class_names = _get_filenames_and_classes(image_dir)
+    random.shuffle(photo_filenames)
 
     np.save(os.path.join(output_dir, "file_names_%s.npy" % phase_name), photo_filenames)
 
@@ -181,15 +184,15 @@ if __name__ == '__main__':
     fl.DEFINE_boolean('parallel_exec', False, '')
     fl.DEFINE_boolean('multiple', True, '')
 
-    fl.DEFINE_string('dataset_name', "deepfashion", "")
+    fl.DEFINE_string('dataset_name', "street2shop", "")
     fl.DEFINE_string('phase_name', "train", "")
     fl.DEFINE_string('image_dir',
-                     'D:/data/fashion/image_retrieval/deep_fashion/In-shop Clothes Retrieval Benchmark/split', '')
+                     'D:/data/fashion/image_retrieval/images_for_tfrecord/street2shop/tfrecord_images', '')
     fl.DEFINE_string('tfrecord_output',
-                     'D:/data/fashion/image_retrieval/deep_fashion/In-shop Clothes Retrieval Benchmark/tfrecord_with_attr',
+                     'D:/data/fashion/image_retrieval/images_for_tfrecord/street2shop/tfrecord',
                      '')
     fl.DEFINE_string('attr_path',
-                     'D:/data/fashion/image_retrieval/deep_fashion/In-shop Clothes Retrieval Benchmark/Anno/attr_file_map.json',
+                     None,
                      '')
     fl.DEFINE_integer('num_channels', 3, '')
     fl.DEFINE_integer('num_shards', 4, '')

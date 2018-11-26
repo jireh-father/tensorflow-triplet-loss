@@ -301,6 +301,9 @@ def build_model(features, labels, cf, attrs=None, is_training=True, use_attr_net
     with tf.variable_scope('model'):
         # Compute the embeddings with the model
         embeddings, end_points = build_slim_model(is_training, images, cf)
+        if cf.l2norm:
+            embeddings = tf.nn.l2_normalize(tf.expand_dims(embeddings, 1), 2)
+            embeddings = tf.squeeze(embeddings)
         if attrs is not None and use_attr_net:
             hidden_step = int((cf.attr_dim - cf.embedding_size) / (num_hidden_attr_net + 1))
             for i in range(num_hidden_attr_net):
@@ -309,6 +312,9 @@ def build_model(features, labels, cf, attrs=None, is_training=True, use_attr_net
                                            trainable=is_training)
                 attr_net = tf.layers.dropout(attr_net, training=is_training)
             attrs = tf.layers.dense(attr_net, cf.embedding_size, tf.nn.relu, trainable=is_training)
+        if cf.l2norm:
+            attrs = tf.nn.l2_normalize(tf.expand_dims(attrs, 1), 2)
+            attrs = tf.squeeze(attrs)
     embedding_mean_norm = tf.reduce_mean(tf.norm(embeddings, axis=1))
 
     tf.summary.scalar("embedding_mean_norm", embedding_mean_norm)

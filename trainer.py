@@ -318,6 +318,7 @@ if __name__ == '__main__':
     fl.DEFINE_string('triplet_strategy', 'batch_hard', '')
     fl.DEFINE_float('margin', 0.5, '')
     fl.DEFINE_boolean('squared', False, '')
+    fl.DEFINE_boolean('l2norm', False, '')
 
     #######################
     # Attribute data #

@@ -1,4 +1,5 @@
 import tensorflow as tf
+import numpy as np
 
 F = tf.app.flags.FLAGS
 
@@ -37,6 +38,30 @@ def count_records(tfrecord_filenames):
         for _ in tf.python_io.tf_record_iterator(fn):
             c += 1
     return c
+
+
+def get_images_by_indices(tfrecord_filenames, indices):
+    indices = {i: True for i in indices}
+    tfrecord_filenames.sort()
+    image_list = []
+    total = 0
+    for fn in tfrecord_filenames:
+        record_iterator = tf.python_io.tf_record_iterator(path=fn)
+
+        for i, string_record in enumerate(record_iterator):
+            j = i + total
+            if j not in indices:
+                continue
+            example = tf.train.Example()
+            example.ParseFromString(string_record)
+            image_string = example.features.feature['image/encoded'].bytes_list.value[0].decode('utf-8')
+            height = int(example.features.feature['image/height'].int64_list.value[0])
+            width = int(example.features.feature['image/width'].int64_list.value[0])
+            img_1d = np.fromstring(image_string, dtype=np.uint8)
+            reconstructed_img = img_1d.reshape((height, width, -1))
+            image_list.append(reconstructed_img)
+        total += (i + 1)
+    return image_list
 
 
 def count_records_each_class(tfrecords_filenames):
