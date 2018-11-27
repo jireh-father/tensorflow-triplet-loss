@@ -307,7 +307,7 @@ if __name__ == '__main__':
     fl.DEFINE_integer('shuffle_buffer_size', 128, '')
     fl.DEFINE_integer('train_image_channel', 3, '')
     fl.DEFINE_integer('train_image_size', 224, '')
-    fl.DEFINE_integer('max_number_of_steps', 100000, '')
+    fl.DEFINE_integer('max_number_of_steps', None, '')
     fl.DEFINE_integer('max_number_of_epochs', 10, '')
     fl.DEFINE_integer('keep_checkpoint_max', 5, '')
 
