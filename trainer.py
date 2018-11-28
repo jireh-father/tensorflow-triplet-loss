@@ -15,7 +15,7 @@ import traceback
 slim = tf.contrib.slim
 
 
-def main(cf):
+def main(cf, hyper_param_txt):
     tf.logging.set_verbosity(tf.logging.INFO)
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
     os.environ["CUDA_VISIBLE_DEVICES"] = F.gpu_no
@@ -25,9 +25,7 @@ def main(cf):
     if not os.path.isdir(cf.save_dir):
         os.makedirs(cf.save_dir)
     f = open(os.path.join(cf.save_dir, "train_parameters_%s.txt" % start_time), mode="w+")
-    param_iterator = iter(cf)
-    for key in param_iterator:
-        f.write("%s:%s\n" % (key, str(getattr(cf, key))))
+    f.write(hyper_param_txt)
 
     # inputs_ph = tf.placeholder(tf.float32, [None, cf.train_image_size, cf.train_image_size, cf.train_image_channel],
     #                            name="inputs")
@@ -171,6 +169,8 @@ def main(cf):
     num_trained_images = 0
     last_saved_epoch = None
     last_saved_step = None
+    start_avg_loss_steps = 10
+    start_total_loss = 0.
     while True:
         # sess.run(iterator.initializer, feed_dict={seed_ph: steps})
         try:
@@ -219,6 +219,8 @@ def main(cf):
                 summary_writer.add_summary(summary, steps)
             else:
                 loss, _ = sess.run([loss_op, train_op], feed_dict=feed_dict)
+            if steps <= start_avg_loss_steps:
+                start_total_loss += loss
             train_time = time.time() - start
 
             if steps % cf.log_every_n_steps == 0:
@@ -262,22 +264,17 @@ def main(cf):
     tf.reset_default_graph()
 
     if cf.notify_after_training:
-        param_iterator = iter(cf)
-        host_name = socket.gethostname()
-        host_ip = socket.gethostbyname(host_name)
-        end_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-
-        txt = "%s[%s]\n" % (host_name, host_ip)
+        txt = "%s[%s]\n\n" % (socket.gethostname(), socket.gethostbyname(socket.gethostname()))
+        txt += "start avg loss : %f" % (start_total_loss / start_avg_loss_steps)
         txt += "last loss : %f" % loss
         txt += "start time: %s\n" % start_time_str
-        txt += "end time: %s\n" % end_time
+        txt += "end time: %s\n" % datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         if cf.eval_after_training:
-            txt += "goint to evaluate"
+            txt += "going to evaluate"
         else:
-            txt += "not goint to evaluate"
+            txt += "not going to evaluate"
         txt += "\n[params]\n"
-        for key in param_iterator:
-            txt += "%s:%s\n" % (key, str(getattr(cf, key)))
+        txt += hyper_param_txt
         util.send_msg_to_slack("\nTraining is Done\n" + txt)
 
     if cf.eval_after_training:
@@ -289,7 +286,6 @@ def main(cf):
             cf.train_image_size, cf.eval_batch_size, cf.preprocessing_name, 1 if cf.notify_after_training else 0)
         print(eval_cmd)
         os.system(eval_cmd)
-
     else:
         if cf.shutdown_after_train:
             os.system("sudo shutdown now")
@@ -403,21 +399,24 @@ if __name__ == '__main__':
                                                'By default, None would train all the variables.')
 
     F = fl.FLAGS
+    param_iterator = iter(F)
+    hyper_param_txt = ""
+    for key in param_iterator:
+        hyper_param_txt += "%s:%s\n" % (key, str(getattr(F, key)))
     try:
         start_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        main(F)
-    except:
-        param_iterator = iter(F)
-        host_name = socket.gethostname()
-        host_ip = socket.gethostbyname(host_name)
-        end_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-
-        txt = "%s[%s]\n\n" % (host_name, host_ip)
+        txt = "%s[%s]\n\n" % (socket.gethostname(), socket.gethostbyname(socket.gethostname()))
         txt += "start time: %s\n" % start_time
-        txt += "end time: %s\n" % end_time
+        txt += "\n[params]\n"
+        txt += hyper_param_txt
+        util.send_msg_to_slack("\nStarted to train !!!\n\n" + txt)
+        main(F, hyper_param_txt)
+    except:
+        txt = "%s[%s]\n\n" % (socket.gethostname(), socket.gethostbyname(socket.gethostname()))
+        txt += "start time: %s\n" % start_time
+        txt += "end time: %s\n" % datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         txt += "\n[stack trace]\n"
         txt += traceback.format_exc()
         txt += "\n[params]\n"
-        for key in param_iterator:
-            txt += "%s:%s\n" % (key, str(getattr(F, key)))
+        txt += hyper_param_txt
         util.send_msg_to_slack("\nTraining Exception!!!\n\n" + txt)

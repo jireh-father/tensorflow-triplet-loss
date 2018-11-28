@@ -92,14 +92,10 @@ def main(args):
                                  epochs_str, args.gpu_no)))
 
     if args.notify_after_training == "1":
-        host_name = socket.gethostname()
-        host_ip = socket.gethostbyname(host_name)
-        end_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-
-        txt = "%s[%s]\n\n" % (host_name, host_ip)
+        txt = "%s[%s]\n\n" % (socket.gethostname(), socket.gethostbyname(socket.gethostname()))
         txt += "best accuracy %f at epoch %d\n\n" % (max_acc, max_idx)
         txt += "start time: %s\n" % start_time
-        txt += "end time: %s\n" % end_time
+        txt += "end time: %s\n" % datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         txt += "\n[params]\n"
         for arg in vars(args):
             txt += "%s:%s\n" % (arg, str(getattr(args, arg)))
@@ -114,15 +110,17 @@ if __name__ == '__main__':
     try:
         start_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         args = parser.parse_args()
+        txt = "%s[%s]\n\n" % (socket.gethostname(), socket.gethostbyname(socket.gethostname()))
+        txt += "start time: %s\n" % start_time
+        txt += "\n[params]\n"
+        for arg in vars(args):
+            txt += "%s:%s\n" % (arg, str(getattr(args, arg)))
+        util.send_msg_to_slack("\nStarted to evaluate!!!\n\n" + txt)
         main(args)
     except:
-        host_name = socket.gethostname()
-        host_ip = socket.gethostbyname(host_name)
-        end_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-
-        txt = "%s[%s]\n\n" % (host_name, host_ip)
+        txt = "%s[%s]\n\n" % (socket.gethostname(), socket.gethostbyname(socket.gethostname()))
         txt += "start time: %s\n" % start_time
-        txt += "end time: %s\n" % end_time
+        txt += "end time: %s\n" % datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         txt += "\n[stack trace]\n"
         txt += traceback.format_exc()
         txt += "\n[params]\n"

@@ -60,6 +60,7 @@ def send_msg_to_slack(text):
     except Exception as em:
         print("EXCEPTION: " + str(em))
 
+
 def get_images_by_indices(tfrecord_filenames, indices):
     indices = {i: True for i in indices}
     tfrecord_filenames.sort()
