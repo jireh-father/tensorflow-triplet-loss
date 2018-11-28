@@ -251,6 +251,8 @@ def main(cf):
         if last_saved_epoch is None or last_saved_epoch < epoch:
             saver.save(sess, cf.save_dir + "/model.ckpt", epoch)
 
+    summary_writer.add_summary(sess.run(summary_op, feed_dict=feed_dict), steps)
+
     sess.close()
     tf.reset_default_graph()
     if cf.eval_after_training:
