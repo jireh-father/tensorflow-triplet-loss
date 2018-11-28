@@ -159,9 +159,10 @@ def main(cf, hyper_param_txt):
         else:
             cp = cf.checkpoint_path
         saver.restore(sess, cp)
-        latest_epoch = int(os.path.basename(latest_checkpoint).split("-")[1])
-        epoch = latest_epoch + 1
-        cf.max_number_of_epochs += latest_epoch
+        if os.path.isdir(cf.checkpoint_path) and tf.train.latest_checkpoint(cf.checkpoint_path) is not None:
+            latest_epoch = int(os.path.basename(latest_checkpoint).split("-")[1])
+            epoch = latest_epoch + 1
+            cf.max_number_of_epochs += latest_epoch
         f.write("%s:%s\n" % ("restore_checkpoint", latest_checkpoint))
     else:
         saver = tf.train.Saver(tf.global_variables(), max_to_keep=cf.keep_checkpoint_max)
@@ -318,19 +319,19 @@ if __name__ == '__main__':
     #######################
 
     fl.DEFINE_string('data_dir',
-                     'D:\data\\fashion\image_retrieval\cafe24multi\\tfrecord',
+                     'D:\data\\fashion\\fashion_style14_v1\FashionStyle14_v1\\tfrecord-rtv',
                      '')
     # fl.DEFINE_string('data_dir',
     #                  "D:\data\\fashion\image_retrieval\cafe24product\\tfrecord_with_attr",
     #                  '')
 
-    fl.DEFINE_string('model_name', 'alexnet_v2', '')
+    fl.DEFINE_string('model_name', 'inception_resnet_v2', '')
     fl.DEFINE_string('preprocessing_name', "inception", '')
-    fl.DEFINE_integer('batch_size', 32, '')
-    fl.DEFINE_integer('sampling_buffer_size', 500, '')
+    fl.DEFINE_integer('batch_size', 16, '')
+    fl.DEFINE_integer('sampling_buffer_size', 200, '')
     fl.DEFINE_integer('shuffle_buffer_size', 10000, '')
     fl.DEFINE_integer('train_image_channel', 3, '')
-    fl.DEFINE_integer('train_image_size', 224, '')
+    fl.DEFINE_integer('train_image_size', 299, '')
     fl.DEFINE_integer('max_number_of_steps', None, '')
     fl.DEFINE_integer('max_number_of_epochs', 10, '')
     fl.DEFINE_integer('keep_checkpoint_max', 5, '')
@@ -391,7 +392,7 @@ if __name__ == '__main__':
     fl.DEFINE_string('checkpoint_exclude_scopes', None,
                      'Comma-separated list of scopes of variables to exclude when restoring '
                      'from a checkpoint.')
-    # fl.DEFINE_string('checkpoint_exclude_scopes', "model/InceptionResnetV2/Logits,model/InceptionResnetV2/AuxLogits",
+    # fl.DEFINE_string('checkpoint_exclude_scopes', "InceptionResnetV2/Logits,InceptionResnetV2/AuxLogits",
     #                  'Comma-separated list of scopes of variables to exclude when restoring '
     #                  'from a checkpoint.')
 
@@ -420,3 +421,4 @@ if __name__ == '__main__':
         txt += "\n[params]\n"
         txt += hyper_param_txt
         util.send_msg_to_slack("\nTraining Exception!!!\n\n" + txt)
+        traceback.print_exc()
