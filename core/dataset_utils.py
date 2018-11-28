@@ -74,13 +74,14 @@ def image_to_tfexample(image_data, image_format, height, width, class_id, class_
         'image/class/name': bytes_feature(class_name),
         'image/class/label': int64_feature(class_id),
         'image/height': int64_feature(height),
-        'image/width': int64_feature(width),
-        'image/attr': int64_feature(attr)
+        'image/width': int64_feature(width)
     }
+    if attr is not None:
+        feature_dict["image/attr"] = int64_feature(attr)
 
     return tf.train.Example(features=tf.train.Features(feature=
-        feature_dict
-    ))
+                                                       feature_dict
+                                                       ))
 
 
 def write_label_file(labels_to_class_names, dataset_dir,

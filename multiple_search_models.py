@@ -48,14 +48,13 @@ def main(args):
         model_epochs = [int(e) for e in args.epoch_list.split(",")]
     model_epochs.sort()
     for i in model_epochs:
-        eval_cmd = 'python eval_retrieval_accuracy_v2.py --model_dir="%s" --data_dir="%s" --restore_epoch=%d --embedding_size=%d --model_name=%s --gpu_no=%s --image_size=%d --eval_batch_size=%d --preprocessing_name=%s --notify_after_training=%s' % (
+        eval_cmd = 'python eval_retrieval_accuracy_v2.py --model_dir="%s" --data_dir="%s" --restore_epoch=%d --embedding_size=%d --model_name=%s --gpu_no=%s --image_size=%d --eval_batch_size=%d --preprocessing_name=%s' % (
             args.model_dir, args.data_dir, i, int(args.embedding_size), args.model_name, args.gpu_no, int(
-                args.image_size), int(args.eval_batch_size), args.preprocessing_name, args.notify_after_training)
+                args.image_size), int(args.eval_batch_size), args.preprocessing_name)
         print(eval_cmd)
         os.system(eval_cmd)
-        search_cmd = 'python search_faiss.py  --model_dir="%s" --data_dir="%s" --restore_epoch=%d --embedding_size=%d --max_top_k=%d --gpu_no=%s --notify_after_training=%s' % (
-            args.model_dir, args.data_dir, i, int(args.embedding_size), int(args.max_top_k), args.gpu_no,
-            args.notify_after_training)
+        search_cmd = 'python search_faiss.py  --model_dir="%s" --data_dir="%s" --restore_epoch=%d --embedding_size=%d --max_top_k=%d --gpu_no=%s' % (
+            args.model_dir, args.data_dir, i, int(args.embedding_size), int(args.max_top_k), args.gpu_no)
         print(search_cmd)
         os.system(search_cmd)
 
