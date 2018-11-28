@@ -73,7 +73,6 @@ def main(args):
         plt.plot(accuracies)
         legends.append("%s %d" % (args.step_type, i))
     plt.legend(legends, loc='upper left')
-    from datetime import datetime
 
     now = datetime.now().strftime('%Y%m%d%H%M%S')
     epochs_str = "all"
