@@ -40,6 +40,7 @@ parser.add_argument('--eval_batch_size', default=256,
                     help="Directory containing the dataset")
 parser.add_argument('--preprocessing_name', default='None',
                     help="Directory containing the dataset")
+
 if __name__ == '__main__':
     tf.logging.set_verbosity(tf.logging.INFO)
 

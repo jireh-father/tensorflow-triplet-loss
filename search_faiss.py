@@ -18,6 +18,7 @@ parser.add_argument('--gpu_no', default="0",
                     help="Directory containing the dataset")
 parser.add_argument('--use_attr', default="0",
                     help="Directory containing the dataset")
+
 if __name__ == '__main__':
 
     args = parser.parse_args()

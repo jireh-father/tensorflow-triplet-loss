@@ -9,6 +9,8 @@ import time
 import numpy as np
 from numba import cuda
 from preprocessing import preprocessing_factory
+import socket
+import traceback
 
 slim = tf.contrib.slim
 
@@ -18,12 +20,13 @@ def main(cf):
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
     os.environ["CUDA_VISIBLE_DEVICES"] = F.gpu_no
     print("CUDA Visible device", device_lib.list_local_devices())
-    now = datetime.now().strftime('%Y%m%d%H%M%S')
+    start_time = datetime.now().strftime('%Y%m%d%H%M%S')
+    start_time_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     if not os.path.isdir(cf.save_dir):
         os.makedirs(cf.save_dir)
-    f = open(os.path.join(cf.save_dir, "train_parameters_%s.txt" % now), mode="w+")
-    iterator = iter(cf)
-    for key in iterator:
+    f = open(os.path.join(cf.save_dir, "train_parameters_%s.txt" % start_time), mode="w+")
+    param_iterator = iter(cf)
+    for key in param_iterator:
         f.write("%s:%s\n" % (key, str(getattr(cf, key))))
 
     # inputs_ph = tf.placeholder(tf.float32, [None, cf.train_image_size, cf.train_image_size, cf.train_image_channel],
@@ -192,6 +195,8 @@ def main(cf):
                     label_buffer[tmp_label] = i
                     single_index_map[tmp_label] = i
             pair_indices = list(pair_indices)
+            # print(len(pair_indices))
+            # continue
             if len(pair_indices) > cf.batch_size:
                 pair_indices = pair_indices[:cf.batch_size]
             elif len(pair_indices) < cf.batch_size:
@@ -255,13 +260,33 @@ def main(cf):
 
     sess.close()
     tf.reset_default_graph()
+
+    if cf.notify_after_training:
+        param_iterator = iter(cf)
+        host_name = socket.gethostname()
+        host_ip = socket.gethostbyname(host_name)
+        end_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+        txt = "%s[%s]\n" % (host_name, host_ip)
+        txt += "last loss : %f" % loss
+        txt += "start time: %s\n" % start_time_str
+        txt += "end time: %s\n" % end_time
+        if cf.eval_after_training:
+            txt += "goint to evaluate"
+        else:
+            txt += "not goint to evaluate"
+        txt += "\n[params]\n"
+        for key in param_iterator:
+            txt += "%s:%s\n" % (key, str(getattr(cf, key)))
+        util.send_msg_to_slack("\nTraining is Done\n" + txt)
+
     if cf.eval_after_training:
         cuda.select_device(0)
         cuda.close()
-        eval_cmd = 'python -u multiple_search_models.py --model_dir="%s" --embedding_size=%d --data_dir="%s" --model_name=%s --max_top_k=%d --shutdown_after_train=%d --gpu_no=%s --step_type=%s --image_size=%s --eval_batch_size=%d --preprocessing_name=%s' % (
+        eval_cmd = 'python -u multiple_search_models.py --model_dir="%s" --embedding_size=%d --data_dir="%s" --model_name=%s --max_top_k=%d --shutdown_after_train=%d --gpu_no=%s --step_type=%s --image_size=%s --eval_batch_size=%d --preprocessing_name=%s --notify_after_training=%d' % (
             cf.save_dir, cf.embedding_size, cf.data_dir, cf.model_name, cf.eval_max_top_k,
             1 if cf.shutdown_after_train else 0, cf.gpu_no, "step" if cf.use_save_steps else "epoch",
-            cf.train_image_size, cf.eval_batch_size, cf.preprocessing_name)
+            cf.train_image_size, cf.eval_batch_size, cf.preprocessing_name, 1 if cf.notify_after_training else 0)
         print(eval_cmd)
         os.system(eval_cmd)
 
@@ -288,6 +313,7 @@ if __name__ == '__main__':
     fl.DEFINE_boolean('eval_after_training', True, '')
     fl.DEFINE_integer('eval_max_top_k', 50, '')
     fl.DEFINE_integer('eval_batch_size', 128, '')
+    fl.DEFINE_boolean('notify_after_training', True, '')
 
     fl.DEFINE_string('gpu_no', "0", '')
 
@@ -296,7 +322,7 @@ if __name__ == '__main__':
     #######################
 
     fl.DEFINE_string('data_dir',
-                     'D:\data\\fashion\image_retrieval\deep_fashion\In-shop Clothes Retrieval Benchmark\\tfrecord_with_attr_v2',
+                     'D:\data\\fashion\image_retrieval\cafe24multi\\tfrecord',
                      '')
     # fl.DEFINE_string('data_dir',
     #                  "D:\data\\fashion\image_retrieval\cafe24product\\tfrecord_with_attr",
@@ -305,8 +331,8 @@ if __name__ == '__main__':
     fl.DEFINE_string('model_name', 'alexnet_v2', '')
     fl.DEFINE_string('preprocessing_name', "inception", '')
     fl.DEFINE_integer('batch_size', 32, '')
-    fl.DEFINE_integer('sampling_buffer_size', 128, '')
-    fl.DEFINE_integer('shuffle_buffer_size', 128, '')
+    fl.DEFINE_integer('sampling_buffer_size', 500, '')
+    fl.DEFINE_integer('shuffle_buffer_size', 10000, '')
     fl.DEFINE_integer('train_image_channel', 3, '')
     fl.DEFINE_integer('train_image_size', 224, '')
     fl.DEFINE_integer('max_number_of_steps', None, '')
@@ -377,4 +403,21 @@ if __name__ == '__main__':
                                                'By default, None would train all the variables.')
 
     F = fl.FLAGS
-    main(F)
+    try:
+        start_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        main(F)
+    except:
+        param_iterator = iter(F)
+        host_name = socket.gethostname()
+        host_ip = socket.gethostbyname(host_name)
+        end_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+        txt = "%s[%s]\n\n" % (host_name, host_ip)
+        txt += "start time: %s\n" % start_time
+        txt += "end time: %s\n" % end_time
+        txt += "\n[stack trace]\n"
+        txt += traceback.format_exc()
+        txt += "\n[params]\n"
+        for key in param_iterator:
+            txt += "%s:%s\n" % (key, str(getattr(F, key)))
+        util.send_msg_to_slack("\nTraining Exception!!!\n\n" + txt)

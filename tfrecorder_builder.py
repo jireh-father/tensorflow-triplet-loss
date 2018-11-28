@@ -49,6 +49,38 @@ def _get_filenames_and_classes(image_dir):
     return photo_filenames, sorted(class_names)
 
 
+def _get_filenames_and_classes_by_train_test(image_dir, train_ratio=0.9):
+    root = image_dir
+    directories = []
+    class_names = []
+    for filename in os.listdir(root):
+        path = os.path.join(root, filename)
+        if os.path.isdir(path):
+            directories.append(path)
+            class_names.append(filename)
+
+    train_photo_filenames = []
+    test_photo_filenames = []
+    random.seed(0)
+    # todo: handle both uppercase and lowercase
+    if os.name == 'nt':
+        exts = ["jpg", "jpeg"]
+    else:
+        exts = ["jpg", "JPEG", "JPG", "jpeg"]
+    for directory in directories:
+        tmp_photo_filenames = []
+        for ext in exts:
+            for path in glob.glob(os.path.join(directory, "*.%s" % ext)):
+                # path = os.path.join(directory, filename)
+                tmp_photo_filenames.append(path)
+        random.shuffle(tmp_photo_filenames)
+        train_cnt = int(float(len(tmp_photo_filenames)) * train_ratio)
+        train_photo_filenames += tmp_photo_filenames[:train_cnt]
+        test_photo_filenames += tmp_photo_filenames[train_cnt:]
+
+    return train_photo_filenames, test_photo_filenames, sorted(class_names)
+
+
 class ImageReader(object):
     """Helper class that provides TensorFlow image coding utilities."""
 
@@ -98,13 +130,13 @@ def _convert_dataset(dataset_name, phase_name, filenames, class_names_to_ids, ou
                     start_ndx = shard_id * num_per_shard
                     end_ndx = min((shard_id + 1) * num_per_shard, len(filenames))
                     for i in range(start_ndx, end_ndx):
-                        sys.stdout.write('/r>> Converting image %d/%d shard %d, %s' % (
+                        sys.stdout.write('\r>> Converting image %d/%d shard %d, %s' % (
                             i + 1, len(filenames), shard_id, filenames[i]))
                         sys.stdout.flush()
 
                         # Read the filename:
-                        image_data = tf.gfile.FastGFile(filenames[i], 'rb').read()
                         try:
+                            image_data = tf.gfile.FastGFile(filenames[i], 'rb').read()
                             height, width = image_reader.read_image_dims(sess, image_data)
                         except:
                             continue
@@ -140,6 +172,34 @@ def _clean_up_temporary_files(dataset_dir):
         shutil.rmtree(tmp_dir)
 
 
+def make_tfrecords_train_test(dataset_name, train_ratio, image_dir, output_dir, num_shards, num_channels,
+                              remove_images):
+    if not tf.gfile.Exists(image_dir):
+        tf.gfile.MakeDirs(image_dir)
+
+    if _dataset_exists(dataset_name, output_dir, "train", num_shards):
+        print('Dataset files already exist. Exiting without re-creating them.')
+        return False
+
+    if not os.path.isdir(output_dir):
+        os.makedirs(output_dir)
+
+    training_filenames, test_filenames, class_names = _get_filenames_and_classes_by_train_test(image_dir, train_ratio)
+    class_names_to_ids = dict(zip(class_names, range(len(class_names))))
+    _convert_dataset(dataset_name, "train", training_filenames, class_names_to_ids, output_dir, num_shards,
+                     num_channels)
+    _convert_dataset(dataset_name, "test", test_filenames, class_names_to_ids, output_dir, num_shards,
+                     num_channels)
+
+    # Finally, write the labels file:
+    labels_to_class_names = dict(zip(range(len(class_names)), class_names))
+    dataset_utils.write_label_file(labels_to_class_names, output_dir, dataset_name)
+
+    if remove_images:
+        _clean_up_temporary_files(image_dir)
+    return True
+
+
 def make_tfrecords(dataset_name, phase_name, image_dir, output_dir, num_shards, num_channels, remove_images,
                    attr_path=None):
     if not tf.gfile.Exists(image_dir):
@@ -172,7 +232,7 @@ def make_tfrecords(dataset_name, phase_name, image_dir, output_dir, num_shards, 
     # Finally, write the labels file:
     labels_to_class_names = dict(zip(range(len(class_names)), class_names))
     json.dump(labels_to_class_names, open(os.path.join(output_dir, "labels_%s.json" % phase_name), "w+"))
-    dataset_utils.write_label_file(labels_to_class_names, image_dir, dataset_name)
+    dataset_utils.write_label_file(labels_to_class_names, output_dir, "%s_%s" % (dataset_name, phase_name))
 
     if remove_images:
         _clean_up_temporary_files(image_dir)
@@ -184,16 +244,17 @@ if __name__ == '__main__':
     fl.DEFINE_boolean('parallel_exec', False, '')
     fl.DEFINE_boolean('multiple', True, '')
 
-    fl.DEFINE_string('dataset_name', "street2shop", "")
+    fl.DEFINE_string('dataset_name', "fashionstyle14", "")
     fl.DEFINE_string('phase_name', "train", "")
     fl.DEFINE_string('image_dir',
-                     'D:/data/fashion/image_retrieval/images_for_tfrecord/street2shop/tfrecord_images', '')
+                     'D:/data/fashion/fashion_style14_v1/FashionStyle14_v1/tfrecord-rtv-images', '')
     fl.DEFINE_string('tfrecord_output',
-                     'D:/data/fashion/image_retrieval/images_for_tfrecord/street2shop/tfrecord',
+                     'D:/data/fashion/fashion_style14_v1/FashionStyle14_v1/tfrecord-rtv',
                      '')
     fl.DEFINE_string('attr_path',
                      None,
                      '')
+    fl.DEFINE_float('train_ratio', None, '')
     fl.DEFINE_integer('num_channels', 3, '')
     fl.DEFINE_integer('num_shards', 4, '')
     fl.DEFINE_boolean('remove_images', False, '')
@@ -203,13 +264,23 @@ if __name__ == '__main__':
     if F.multiple:
         image_dirs = glob.glob(os.path.join(F.image_dir, "*"))
         for image_dir in image_dirs:
-            p = Process(target=make_tfrecords, args=(
-                F.dataset_name, os.path.basename(image_dir), image_dir, F.tfrecord_output, F.num_shards,
-                F.num_channels, F.remove_images, F.attr_path))
+            if F.train_ratio is None:
+                p = Process(target=make_tfrecords, args=(
+                    F.dataset_name, os.path.basename(image_dir), image_dir, F.tfrecord_output, F.num_shards,
+                    F.num_channels, F.remove_images, F.attr_path))
+            else:
+                p = Process(target=make_tfrecords_train_test(), args=(
+                    F.dataset_name + "_" + os.path.basename(image_dir), F.train_ratio, image_dir, F.tfrecord_output,
+                    F.num_shards,
+                    F.num_channels, F.remove_images))
             print("started to build tfrecords: %s" % (image_dir))
             p.start()
             if not F.parallel_exec:
                 p.join()
     else:
-        make_tfrecords(F.dataset_name, F.phase_name, F.image_dir, F.tfrecord_output, F.num_shards, F.num_channels,
-                       F.remove_images, F.attr_path)
+        if F.train_ratio is None:
+            make_tfrecords(F.dataset_name, F.phase_name, F.image_dir, F.tfrecord_output, F.num_shards, F.num_channels,
+                           F.remove_images, F.attr_path)
+        else:
+            make_tfrecords_train_test(F.dataset_name, F.train_ratio, F.image_dir, F.tfrecord_output, F.num_shards,
+                                      F.num_channels, F.remove_images)

@@ -1,5 +1,13 @@
 import tensorflow as tf
 import numpy as np
+import sys
+import socket
+
+if sys.version_info[0] < 3:
+    import urllib2 as request
+else:
+    from urllib import request
+import json
 
 F = tf.app.flags.FLAGS
 
@@ -39,6 +47,18 @@ def count_records(tfrecord_filenames):
             c += 1
     return c
 
+
+def send_msg_to_slack(text):
+    post = {"text": text}
+
+    try:
+        json_data = json.dumps(post)
+        req = request.Request("https://hooks.slack.com/services/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",
+                              data=json_data.encode(),
+                              headers={'Content-Type': 'application/json'})
+        resp = request.urlopen(req)
+    except Exception as em:
+        print("EXCEPTION: " + str(em))
 
 def get_images_by_indices(tfrecord_filenames, indices):
     indices = {i: True for i in indices}

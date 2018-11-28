@@ -1,9 +1,13 @@
 import matplotlib
 
 matplotlib.use('Agg')
+import socket
 import glob, os
 import argparse
+import util
 import json
+from datetime import datetime
+import traceback
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--model_dir', default='experiments/alexnet',
@@ -30,9 +34,13 @@ parser.add_argument('--eval_batch_size', default=256,
                     help="Directory containing the dataset")
 parser.add_argument('--preprocessing_name', default='None',
                     help="Directory containing the dataset")
+parser.add_argument('--notify_after_training', default='1',
+                    help="Directory containing the dataset")
 
-if __name__ == '__main__':
-    args = parser.parse_args()
+
+def main(args):
+    start_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
     if args.epoch_list is None:
         model_epochs = [int(os.path.basename(path).split("-")[1].split('.')[0]) for path in
                         glob.glob(os.path.join(args.model_dir, "model*.index"))]
@@ -40,13 +48,14 @@ if __name__ == '__main__':
         model_epochs = [int(e) for e in args.epoch_list.split(",")]
     model_epochs.sort()
     for i in model_epochs:
-        eval_cmd = 'python eval_retrieval_accuracy_v2.py --model_dir="%s" --data_dir="%s" --restore_epoch=%d --embedding_size=%d --model_name=%s --gpu_no=%s --image_size=%d --eval_batch_size=%d --preprocessing_name=%s' % (
+        eval_cmd = 'python eval_retrieval_accuracy_v2.py --model_dir="%s" --data_dir="%s" --restore_epoch=%d --embedding_size=%d --model_name=%s --gpu_no=%s --image_size=%d --eval_batch_size=%d --preprocessing_name=%s --notify_after_training=%s' % (
             args.model_dir, args.data_dir, i, int(args.embedding_size), args.model_name, args.gpu_no, int(
-                args.image_size), int(args.eval_batch_size), args.preprocessing_name)
+                args.image_size), int(args.eval_batch_size), args.preprocessing_name, args.notify_after_training)
         print(eval_cmd)
         os.system(eval_cmd)
-        search_cmd = 'python search_faiss.py  --model_dir="%s" --data_dir="%s" --restore_epoch=%d --embedding_size=%d --max_top_k=%d --gpu_no=%s' % (
-            args.model_dir, args.data_dir, i, int(args.embedding_size), int(args.max_top_k), args.gpu_no)
+        search_cmd = 'python search_faiss.py  --model_dir="%s" --data_dir="%s" --restore_epoch=%d --embedding_size=%d --max_top_k=%d --gpu_no=%s --notify_after_training=%s' % (
+            args.model_dir, args.data_dir, i, int(args.embedding_size), int(args.max_top_k), args.gpu_no,
+            args.notify_after_training)
         print(search_cmd)
         os.system(search_cmd)
 
@@ -83,5 +92,42 @@ if __name__ == '__main__':
                                  now, args.model_name, os.path.basename(args.model_dir),
                                  os.path.basename(args.data_dir), int(args.embedding_size), int(args.max_top_k),
                                  epochs_str, args.gpu_no)))
+
+    if args.notify_after_training == "1":
+        host_name = socket.gethostname()
+        host_ip = socket.gethostbyname(host_name)
+        end_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+        txt = "%s[%s]\n\n" % (host_name, host_ip)
+        txt += "best accuracy %f at epoch %d\n\n" % (max_acc, max_idx)
+        txt += "start time: %s\n" % start_time
+        txt += "end time: %s\n" % end_time
+        txt += "\n[params]\n"
+        for arg in vars(args):
+            txt += "%s:%s\n" % (arg, str(getattr(args, arg)))
+        util.send_msg_to_slack("\nEvaluating is Done\n\n" + txt)
+
     if args.shutdown_after_train == "1":
         os.system("sudo shutdown now")
+
+
+if __name__ == '__main__':
+
+    try:
+        start_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        args = parser.parse_args()
+        main(args)
+    except:
+        host_name = socket.gethostname()
+        host_ip = socket.gethostbyname(host_name)
+        end_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+        txt = "%s[%s]\n\n" % (host_name, host_ip)
+        txt += "start time: %s\n" % start_time
+        txt += "end time: %s\n" % end_time
+        txt += "\n[stack trace]\n"
+        txt += traceback.format_exc()
+        txt += "\n[params]\n"
+        for arg in vars(args):
+            txt += "%s:%s\n" % (arg, str(getattr(args, arg)))
+        util.send_msg_to_slack("\nEvaluating Exception!!!\n\n" + txt)
