@@ -40,6 +40,8 @@ parser.add_argument('--eval_batch_size', default=256,
                     help="Directory containing the dataset")
 parser.add_argument('--preprocessing_name', default='None',
                     help="Directory containing the dataset")
+parser.add_argument('--use_old_model', default='0',
+                    help="Directory containing the dataset")
 
 if __name__ == '__main__':
     tf.logging.set_verbosity(tf.logging.INFO)
@@ -103,7 +105,7 @@ if __name__ == '__main__':
         images, labels = iterator.get_next()
         attrs = None
 
-    embedding_op = model_fn.build_model(images, None, args, attrs, False)
+    embedding_op = model_fn.build_model(images, None, args, attrs, False, use_old_model=(args.use_old_model == "1"))
 
     query_files = glob.glob(os.path.join(args.data_dir, "*_query*tfrecord"))
     query_files.sort()
