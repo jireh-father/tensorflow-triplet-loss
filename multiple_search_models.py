@@ -103,9 +103,6 @@ def main(args):
             txt += "%s:%s\n" % (arg, str(getattr(args, arg)))
         util.send_msg_to_slack("\nEvaluating is Done\n\n" + txt)
 
-    if args.shutdown_after_train == "1":
-        os.system("sudo shutdown now")
-
 
 if __name__ == '__main__':
 
@@ -129,3 +126,6 @@ if __name__ == '__main__':
         for arg in vars(args):
             txt += "%s:%s\n" % (arg, str(getattr(args, arg)))
         util.send_msg_to_slack("\nEvaluating Exception!!!\n\n" + txt)
+
+    if args.shutdown_after_train == "1":
+        os.system("sudo shutdown now")

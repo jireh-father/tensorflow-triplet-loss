@@ -104,7 +104,8 @@ def main(cf, hyper_param_txt):
     # seed_ph = tf.placeholder(tf.int64, (), name="shuffle_seed")
 
     loss_op, end_points, train_op = model_fn.build_model(images_ph, labels_ph, cf, attrs_ph, True, cf.use_attr_net,
-                                                         cf.num_hidden_attr_net, num_examples, global_step, use_old_model=cf.use_old_model)
+                                                         cf.num_hidden_attr_net, num_examples, global_step,
+                                                         use_old_model=cf.use_old_model)
     vars = tf.trainable_variables()
     summaries = set(tf.get_collection(tf.GraphKeys.SUMMARIES))
 
@@ -292,10 +293,6 @@ def main(cf, hyper_param_txt):
             os.system("sudo shutdown now")
 
 
-def train():
-    pass
-
-
 if __name__ == '__main__':
     fl = tf.app.flags
 
@@ -319,7 +316,7 @@ if __name__ == '__main__':
     #######################
 
     fl.DEFINE_string('data_dir',
-                     'D:\data\\fashion\\fashion_style14_v1\FashionStyle14_v1\\tfrecord-rtv',
+                     'D:\data\\fashion\image_retrieval\mvc\images\\tfrecord',
                      '')
     # fl.DEFINE_string('data_dir',
     #                  "D:\data\\fashion\image_retrieval\cafe24product\\tfrecord_with_attr",
@@ -328,8 +325,8 @@ if __name__ == '__main__':
     fl.DEFINE_string('model_name', 'inception_resnet_v2', '')
     fl.DEFINE_string('preprocessing_name', "inception", '')
     fl.DEFINE_integer('batch_size', 16, '')
-    fl.DEFINE_integer('sampling_buffer_size', 200, '')
-    fl.DEFINE_integer('shuffle_buffer_size', 10000, '')
+    fl.DEFINE_integer('sampling_buffer_size', 550, '')
+    fl.DEFINE_integer('shuffle_buffer_size', 3000, '')
     fl.DEFINE_integer('train_image_channel', 3, '')
     fl.DEFINE_integer('train_image_size', 299, '')
     fl.DEFINE_integer('max_number_of_steps', None, '')
@@ -413,6 +410,17 @@ if __name__ == '__main__':
         txt += hyper_param_txt
         util.send_msg_to_slack("\nStarted to train !!!\n\n" + txt)
         main(F, hyper_param_txt)
+
+        if F.eval_after_training:
+            cuda.select_device(0)
+            cuda.close()
+            eval_cmd = 'python -u multiple_search_models.py --model_dir="%s" --embedding_size=%d --data_dir="%s" --model_name=%s --max_top_k=%d --shutdown_after_train=%d --gpu_no=%s --step_type=%s --image_size=%s --eval_batch_size=%d --preprocessing_name=%s --notify_after_training=%d' % (
+                F.save_dir, F.embedding_size, F.data_dir, F.model_name, F.eval_max_top_k,
+                1 if F.shutdown_after_train else 0, F.gpu_no, "step" if F.use_save_steps else "epoch",
+                F.train_image_size, F.eval_batch_size, F.preprocessing_name, 1 if F.notify_after_training else 0)
+            print(eval_cmd)
+            os.system(eval_cmd)
+
     except:
         txt = "%s[%s]\n\n" % (socket.gethostname(), socket.gethostbyname(socket.gethostname()))
         txt += "start time: %s\n" % start_time
@@ -423,3 +431,6 @@ if __name__ == '__main__':
         txt += hyper_param_txt
         util.send_msg_to_slack("\nTraining Exception!!!\n\n" + txt)
         traceback.print_exc()
+
+    if not F.eval_after_training and F.shutdown_after_train:
+        os.system("sudo shutdown now")
