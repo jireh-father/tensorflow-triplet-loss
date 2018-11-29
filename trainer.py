@@ -104,7 +104,7 @@ def main(cf, hyper_param_txt):
     # seed_ph = tf.placeholder(tf.int64, (), name="shuffle_seed")
 
     loss_op, end_points, train_op = model_fn.build_model(images_ph, labels_ph, cf, attrs_ph, True, cf.use_attr_net,
-                                                         cf.num_hidden_attr_net, num_examples, global_step)
+                                                         cf.num_hidden_attr_net, num_examples, global_step, use_old_model=cf.use_old_model)
     vars = tf.trainable_variables()
     summaries = set(tf.get_collection(tf.GraphKeys.SUMMARIES))
 
@@ -353,6 +353,7 @@ if __name__ == '__main__':
     fl.DEFINE_integer('num_hidden_attr_net', 1, '')
     fl.DEFINE_integer('attr_dim', 463, '')
     fl.DEFINE_float('attr_loss_weight', 1.0, '')
+    fl.DEFINE_boolean('use_old_model', False, '')
 
     ######################
     # Optimization Flags #
