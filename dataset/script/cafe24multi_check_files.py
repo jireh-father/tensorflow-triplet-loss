@@ -1,7 +1,7 @@
 import pandas as pd
 import os
 
-csv_path = "D:/data/fashion/image_retrieval/cafe24multi/AreaInfo.csv"
+csv_path = "D:/data/fashion/image_retrieval/cafe24multi_bb/AreaInfo.csv"
 image_dir = ""
 df = pd.read_csv(csv_path)
 fn_path = "D:/data/aipd/picked_dataset/file_names.json"

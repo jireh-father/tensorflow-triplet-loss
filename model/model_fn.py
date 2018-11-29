@@ -293,23 +293,35 @@ def train_op_fun(total_loss, global_step, num_examples, cf):
 
 
 def build_model(features, labels, cf, attrs=None, is_training=True, use_attr_net=False, num_hidden_attr_net=1,
-                num_examples=None, global_step=None):
+                num_examples=None, global_step=None, use_old_model=False):
     images = features
 
     # -----------------------------------------------------------
     # MODEL: define the layers of the model
     # Compute the embeddings with the model
-    embeddings, end_points = build_slim_model(is_training, images, cf)
+    if use_old_model:
+        with tf.variable_scope('model'):
+            embeddings, end_points = build_slim_model(is_training, images, cf)
 
-    if attrs is not None and use_attr_net:
-        hidden_step = int((cf.attr_dim - cf.embedding_size) / (num_hidden_attr_net + 1))
-        for i in range(num_hidden_attr_net):
-            print(cf.attr_dim - (hidden_step * (i + 1)))
-            attr_net = tf.layers.dense(attrs, cf.attr_dim - (hidden_step * (i + 1)), tf.nn.relu,
-                                       trainable=is_training)
-            attr_net = tf.layers.dropout(attr_net, training=is_training)
-        attrs = tf.layers.dense(attr_net, cf.embedding_size, tf.nn.relu, trainable=is_training)
+            if attrs is not None and use_attr_net:
+                hidden_step = int((cf.attr_dim - cf.embedding_size) / (num_hidden_attr_net + 1))
+                for i in range(num_hidden_attr_net):
+                    print(cf.attr_dim - (hidden_step * (i + 1)))
+                    attr_net = tf.layers.dense(attrs, cf.attr_dim - (hidden_step * (i + 1)), tf.nn.relu,
+                                               trainable=is_training)
+                    attr_net = tf.layers.dropout(attr_net, training=is_training)
+                attrs = tf.layers.dense(attr_net, cf.embedding_size, tf.nn.relu, trainable=is_training)
+    else:
+        embeddings, end_points = build_slim_model(is_training, images, cf)
 
+        if attrs is not None and use_attr_net:
+            hidden_step = int((cf.attr_dim - cf.embedding_size) / (num_hidden_attr_net + 1))
+            for i in range(num_hidden_attr_net):
+                print(cf.attr_dim - (hidden_step * (i + 1)))
+                attr_net = tf.layers.dense(attrs, cf.attr_dim - (hidden_step * (i + 1)), tf.nn.relu,
+                                           trainable=is_training)
+                attr_net = tf.layers.dropout(attr_net, training=is_training)
+            attrs = tf.layers.dense(attr_net, cf.embedding_size, tf.nn.relu, trainable=is_training)
     if not is_training:
         if attrs is not None:
             return embeddings, attrs
