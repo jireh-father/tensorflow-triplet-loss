@@ -154,19 +154,18 @@ def main(cf, hyper_param_txt):
             else:
                 variables_to_restore.append(var)
 
-        saver = tf.train.Saver(var_list=variables_to_restore, max_to_keep=cf.keep_checkpoint_max)
+        saver_for_restore = tf.train.Saver(var_list=variables_to_restore, max_to_keep=cf.keep_checkpoint_max)
         if os.path.isdir(cf.checkpoint_path) and tf.train.latest_checkpoint(cf.checkpoint_path) is not None:
             cp = tf.train.latest_checkpoint(cf.checkpoint_path)
         else:
             cp = cf.checkpoint_path
-        saver.restore(sess, cp)
+        saver_for_restore.restore(sess, cp)
         if os.path.isdir(cf.checkpoint_path) and tf.train.latest_checkpoint(cf.checkpoint_path) is not None:
             latest_epoch = int(os.path.basename(latest_checkpoint).split("-")[1])
             epoch = latest_epoch + 1
             cf.max_number_of_epochs += latest_epoch
         f.write("%s:%s\n" % ("restore_checkpoint", latest_checkpoint))
-    else:
-        saver = tf.train.Saver(tf.global_variables(), max_to_keep=cf.keep_checkpoint_max)
+    saver = tf.train.Saver(tf.global_variables(), max_to_keep=cf.keep_checkpoint_max)
     f.close()
     num_trained_images = 0
     last_saved_epoch = None
@@ -282,10 +281,11 @@ def main(cf, hyper_param_txt):
     if cf.eval_after_training:
         cuda.select_device(0)
         cuda.close()
-        eval_cmd = 'python -u multiple_search_models.py --model_dir="%s" --embedding_size=%d --data_dir="%s" --model_name=%s --max_top_k=%d --shutdown_after_train=%d --gpu_no=%s --step_type=%s --image_size=%s --eval_batch_size=%d --preprocessing_name=%s --notify_after_training=%d' % (
+        eval_cmd = 'python -u multiple_search_models.py --model_dir="%s" --embedding_size=%d --data_dir="%s" --model_name=%s --max_top_k=%d --shutdown_after_train=%d --gpu_no=%s --step_type=%s --image_size=%s --eval_batch_size=%d --preprocessing_name=%s --notify_after_training=%d --use_old_model=%d' % (
             cf.save_dir, cf.embedding_size, cf.data_dir, cf.model_name, cf.eval_max_top_k,
             1 if cf.shutdown_after_train else 0, cf.gpu_no, "step" if cf.use_save_steps else "epoch",
-            cf.train_image_size, cf.eval_batch_size, cf.preprocessing_name, 1 if cf.notify_after_training else 0)
+            cf.train_image_size, cf.eval_batch_size, cf.preprocessing_name, 1 if cf.notify_after_training else 0,
+            1 if cf.use_old_model else 0)
         print(eval_cmd)
         os.system(eval_cmd)
     else:
