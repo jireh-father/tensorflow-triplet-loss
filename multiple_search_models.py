@@ -39,8 +39,10 @@ parser.add_argument('--notify_after_training', default='1',
 parser.add_argument('--use_old_model', default='0',
                     help="Directory containing the dataset")
 
+server_map = {"ip-172-31-12-89": "p3.2xlarge", "ip-172-31-29-214": "p3.8xlarge"}
 
-def main(args):
+
+def main(args, hostname):
     start_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
     if args.epoch_list is None:
@@ -94,30 +96,33 @@ def main(args):
                                  epochs_str, args.gpu_no)))
 
     if args.notify_after_training == "1":
-        txt = "%s[%s]\n\n" % (socket.gethostname(), socket.gethostbyname(socket.gethostname()))
+        txt = "%s[%s]\n\n" % (hostname, socket.gethostbyname(socket.gethostname()))
         txt += "best accuracy %f at epoch %d\n\n" % (max_acc, max_idx)
         txt += "start time: %s\n" % start_time
         txt += "end time: %s\n" % datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         txt += "\n[params]\n"
         for arg in vars(args):
             txt += "%s:%s\n" % (arg, str(getattr(args, arg)))
-        util.send_msg_to_slack("\nEvaluating is Done\n\n" + txt)
+        util.send_msg_to_slack("\n\n==================================\nEvaluating is Done\n\n" + txt)
 
 
 if __name__ == '__main__':
 
     try:
         start_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        hostname = socket.gethostname()
+        if hostname in server_map:
+            hostname = server_map[hostname] + "_" + hostname
         args = parser.parse_args()
-        txt = "%s[%s]\n\n" % (socket.gethostname(), socket.gethostbyname(socket.gethostname()))
+        txt = "%s[%s]\n\n" % (hostname, socket.gethostbyname(socket.gethostname()))
         txt += "start time: %s\n" % start_time
         txt += "\n[params]\n"
         for arg in vars(args):
             txt += "%s:%s\n" % (arg, str(getattr(args, arg)))
-        util.send_msg_to_slack("\nStarted to evaluate!!!\n\n" + txt)
-        main(args)
+        util.send_msg_to_slack("\n\n==================================\nStarted to evaluate!!!\n\n" + txt)
+        main(args, hostname)
     except:
-        txt = "%s[%s]\n\n" % (socket.gethostname(), socket.gethostbyname(socket.gethostname()))
+        txt = "%s[%s]\n\n" % (hostname, socket.gethostbyname(socket.gethostname()))
         txt += "start time: %s\n" % start_time
         txt += "end time: %s\n" % datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         txt += "\n[stack trace]\n"
@@ -125,7 +130,7 @@ if __name__ == '__main__':
         txt += "\n[params]\n"
         for arg in vars(args):
             txt += "%s:%s\n" % (arg, str(getattr(args, arg)))
-        util.send_msg_to_slack("\nEvaluating Exception!!!\n\n" + txt)
+        util.send_msg_to_slack("\n\n==================================\nEvaluating Exception!!!\n\n" + txt)
 
     if args.shutdown_after_train == "1":
         os.system("sudo shutdown now")
