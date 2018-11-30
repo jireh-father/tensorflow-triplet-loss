@@ -430,9 +430,7 @@ if __name__ == '__main__':
     F = fl.FLAGS
     param_iterator = iter(F)
     hyper_param_txt = ""
-    for key in param_iterator:
-        if key not in notify_params:
-            continue
+    for key in notify_params:
         hyper_param_txt += "%s:%s\n" % (key, str(getattr(F, key)))
     hostname = socket.gethostname()
     if hostname in server_map:
