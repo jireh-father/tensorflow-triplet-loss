@@ -13,9 +13,39 @@ import socket
 import traceback
 
 slim = tf.contrib.slim
+notify_params = [
+    "gpu_no",
+    "data_dir",
+    "save_dir",
+    "model_name",
+    "preprocessing_name",
+    "batch_size",
+    "learning_rate",
+    "max_number_of_epochs",
+    "max_number_of_steps",
+    "save_interval_epochs",
+    "save_interval_steps",
+    "checkpoint_path",
+    "checkpoint_exclude_scopes",
+    "sampling_buffer_size",
+    "shuffle_buffer_size",
+    "train_image_size",
+    "shutdown_after_train",
+    "eval_batch_size",
+    "keep_checkpoint_max",
+    "embedding_size",
+    "triplet_strategy",
+    "margin",
+    "l2norm",
+    "use_attr",
+    "use_attr_net",
+    "num_hidden_attr_net",
+    "attr_dim",
+]
+server_map = {"ip-172-31-12-89": "p3.2xlarge", "ip-172-31-29-214": "p3.8xlarge"}
 
 
-def main(cf, hyper_param_txt):
+def main(cf, hyper_param_txt, hostname):
     tf.logging.set_verbosity(tf.logging.INFO)
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
     os.environ["CUDA_VISIBLE_DEVICES"] = F.gpu_no
@@ -265,7 +295,7 @@ def main(cf, hyper_param_txt):
     tf.reset_default_graph()
 
     if cf.notify_after_training:
-        txt = "%s[%s]\n\n" % (socket.gethostname(), socket.gethostbyname(socket.gethostname()))
+        txt = "%s[%s]\n\n" % (hostname, socket.gethostbyname(socket.gethostname()))
         txt += "start avg loss : %f" % (start_total_loss / start_avg_loss_steps)
         txt += "last loss : %f" % loss
         txt += "start time: %s\n" % start_time_str
@@ -276,7 +306,7 @@ def main(cf, hyper_param_txt):
             txt += "not going to evaluate"
         txt += "\n[params]\n"
         txt += hyper_param_txt
-        util.send_msg_to_slack("\nTraining is Done\n" + txt)
+        util.send_msg_to_slack("\n\n==================================\nTraining is Done\n" + txt)
 
     if cf.eval_after_training:
         cuda.select_device(0)
@@ -401,15 +431,21 @@ if __name__ == '__main__':
     param_iterator = iter(F)
     hyper_param_txt = ""
     for key in param_iterator:
+        if key not in notify_params:
+            continue
         hyper_param_txt += "%s:%s\n" % (key, str(getattr(F, key)))
+    hostname = socket.gethostname()
+    if hostname in server_map:
+        hostname = server_map[hostname] + "_" + hostname
     try:
         start_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        txt = "%s[%s]\n\n" % (socket.gethostname(), socket.gethostbyname(socket.gethostname()))
+
+        txt = "%s[%s]\n\n" % (hostname, socket.gethostbyname(socket.gethostname()))
         txt += "start time: %s\n" % start_time
         txt += "\n[params]\n"
         txt += hyper_param_txt
-        util.send_msg_to_slack("\nStarted to train !!!\n\n" + txt)
-        main(F, hyper_param_txt)
+        util.send_msg_to_slack("\n\n==================================\nStarted to train !!!\n\n" + txt)
+        main(F, hyper_param_txt, hostname)
 
         if F.eval_after_training:
             cuda.select_device(0)
@@ -422,14 +458,14 @@ if __name__ == '__main__':
             os.system(eval_cmd)
 
     except:
-        txt = "%s[%s]\n\n" % (socket.gethostname(), socket.gethostbyname(socket.gethostname()))
+        txt = "%s[%s]\n\n" % (hostname, socket.gethostbyname(socket.gethostname()))
         txt += "start time: %s\n" % start_time
         txt += "end time: %s\n" % datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         txt += "\n[stack trace]\n"
         txt += traceback.format_exc()
         txt += "\n[params]\n"
         txt += hyper_param_txt
-        util.send_msg_to_slack("\nTraining Exception!!!\n\n" + txt)
+        util.send_msg_to_slack("\n\n==================================\nTraining Exception!!!\n\n" + txt)
         traceback.print_exc()
 
     if not F.eval_after_training and F.shutdown_after_train:
