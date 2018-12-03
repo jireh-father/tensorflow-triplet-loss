@@ -9,7 +9,7 @@
 <img width="299" height="299"
      src="{{url_for('static', filename='upload')}}/{{query_file_name}}"/>
 <h1>result</h1>
-{% for result_file_name in range(len(result_file_names)) %}
+{% for result_file_name in range(num_result_images) %}
 <img width="299" height="299"
      src="{{url_for('static', filename='result')}}/{{result_sub_dir}}/{{result_file_name}}"/>
 {% endfor %}
