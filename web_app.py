@@ -10,11 +10,13 @@ import faiss
 fl = tf.app.flags
 fl.DEFINE_string('image_preprocessing_fn', 'inception', '')
 fl.DEFINE_string('model_name', 'inception_resnet_v2', '')
-fl.DEFINE_string('checkpoint_dir', 'D:\pretrained\dfi_ir_h_image_retrieval', '')
-fl.DEFINE_string('index_tfrecord_pattern',
-                 'D:\data\\fashion\image_retrieval\deep_fashion\In-shop Clothes Retrieval Benchmark\\tfrecord/*index*.tfrecord',
-                 '')
-fl.DEFINE_string('faiss_gpu_no', '', '')
+# fl.DEFINE_string('checkpoint_dir', 'D:\pretrained\dfi_ir_h_image_retrieval', '')
+fl.DEFINE_string('checkpoint_dir', '/home/source/tensorflow-triplet-loss/experiments/dfi_inception_resnet_v2_hard', '')
+# fl.DEFINE_string('index_tfrecord_pattern',
+#                  'D:\data\\fashion\image_retrieval\deep_fashion\In-shop Clothes Retrieval Benchmark\\tfrecord/*index*.tfrecord',
+#                  '')
+fl.DEFINE_string('index_tfrecord_pattern', '/home/data/deepfashion-inshop/*index*.tfrecord', '')
+fl.DEFINE_string('faiss_gpu_no', '1', '')
 fl.DEFINE_integer('image_size', 299, '')
 fl.DEFINE_integer('embedding_size', 128, '')
 fl.DEFINE_integer('max_top_k', 50, '')
