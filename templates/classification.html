@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Fashion Style Classification Using Deep Learning</title>
+</head>
+<body>
+<h1>query</h1>
+<img width="299" height="299"
+     src="{{url_for('static', filename='upload')}}/{{query_file_name}}"/>
+<h1>result</h1>
+{{label_map[result_idx]}}, {{result_probs[result_idx]}} %
+<h1>Visualization(CAM)</h1>
+<img width="299" height="299"
+     src="{{url_for('static', filename='cam')}}/{{cam_filename}}"/>
+<h1>total result</h1>
+{% for i in range(num_classes) %}
+<div>
+    {{label_map[i]}}, {{result_probs[i]}} %
+</div>
+{% endfor %}
+
+</body>
+</html>
