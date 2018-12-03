@@ -2,6 +2,8 @@ import tensorflow as tf
 import numpy as np
 import sys
 import socket
+from PIL import Image
+import io
 
 if sys.version_info[0] < 3:
     import urllib2 as request
@@ -61,28 +63,39 @@ def send_msg_to_slack(text):
         print("EXCEPTION: " + str(em))
 
 
-def get_images_by_indices(tfrecord_filenames, indices):
-    indices = {i: True for i in indices}
+def get_images_by_indices(tfrecord_filenames, indices, return_array=True):
+    indices_map = {i: True for i in indices}
     tfrecord_filenames.sort()
-    image_list = []
+    image_list = {}
     total = 0
-    for fn in tfrecord_filenames:
+    max_idx = max(indices)
+    for f_idx, fn in enumerate(tfrecord_filenames):
         record_iterator = tf.python_io.tf_record_iterator(path=fn)
 
         for i, string_record in enumerate(record_iterator):
             j = i + total
-            if j not in indices:
+            if i > max_idx:
+                break
+            if j not in indices_map:
                 continue
             example = tf.train.Example()
             example.ParseFromString(string_record)
-            image_string = example.features.feature['image/encoded'].bytes_list.value[0].decode('utf-8')
-            height = int(example.features.feature['image/height'].int64_list.value[0])
-            width = int(example.features.feature['image/width'].int64_list.value[0])
-            img_1d = np.fromstring(image_string, dtype=np.uint8)
-            reconstructed_img = img_1d.reshape((height, width, -1))
-            image_list.append(reconstructed_img)
+
+            img_string = (example.features.feature['image/encoded']
+                .bytes_list
+                .value[0])
+            image = Image.open(io.BytesIO(bytearray(img_string)))
+
+            if return_array:
+                image_list[j] = np.array(image)
+                image.close()
+            else:
+                image_list[j] = image
         total += (i + 1)
-    return image_list
+    result = []
+    for i in indices:
+        result.append(image_list[i])
+    return result
 
 
 def count_records_each_class(tfrecords_filenames):

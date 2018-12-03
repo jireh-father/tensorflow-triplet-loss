@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Image Retrieval Using Deep Learning</title>
+</head>
+<body>
+<h1>query</h1>
+<img width="299" height="299"
+     src="{{url_for('static', filename='upload')}}/{{query_file_name}}"/>
+<h1>result</h1>
+{% for result_file_name in range(len(result_file_names)) %}
+<img width="299" height="299"
+     src="{{url_for('static', filename='result')}}/{{result_sub_dir}}/{{result_file_name}}"/>
+{% endfor %}
+<h1>이미지 검색</h1>
+<form method="post" enctype="multipart/form-data" action="/upload">
+    <p><input type=file name=file>
+        <input type=submit value=Upload>
+</form>
+
+<form method="post" enctype="multipart/form-data" action="/upload">
+    <p><input type=file name=file>
+        <input type=submit value=Upload>
+</form>
+</body>
+</html>
