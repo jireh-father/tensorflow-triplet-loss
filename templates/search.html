@@ -9,9 +9,10 @@
 <img width="299" height="299"
      src="{{url_for('static', filename='upload')}}/{{query_file_name}}"/>
 <h1>result</h1>
-{% for result_file_name in range(num_result_images) %}
+{% for i in range(num_result_images) %}
+<span>distance {{result_dist_list[i]}}</span>
 <img width="299" height="299"
-     src="{{url_for('static', filename='result')}}/{{result_sub_dir}}/{{result_file_name}}"/>
+     src="{{url_for('static', filename='result')}}/{{result_sub_dir}}/{{result_file_names[i]}}"/>
 {% endfor %}
 <h1>이미지 검색</h1>
 <form method="post" enctype="multipart/form-data" action="/upload">
