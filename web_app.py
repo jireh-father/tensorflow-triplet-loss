@@ -137,7 +137,7 @@ def search():
         result_file_names.append(result_file_name)
         result_image.save(result_file_name)
     return render_template("search.html", query_file_name=request.args['file_name'], result_sub_dir=sub_dir,
-                           result_file_names=result_file_names)
+                           result_file_names=result_file_names, num_result_images=max_top_k)
 
 
 def allowed_file(file_name):
