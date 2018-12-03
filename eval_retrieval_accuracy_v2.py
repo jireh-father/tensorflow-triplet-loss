@@ -135,7 +135,7 @@ if __name__ == '__main__':
         saver.restore(sess, tf.train.latest_checkpoint(args.model_dir))
 
     if args.save_static_data == "1":
-        query_labels = np.zeros((query_num_examples, int(args.embedding_size)))
+        query_labels = np.zeros((query_num_examples))
         query_embeddings = np.zeros((query_num_examples, int(args.embedding_size)))
         if attrs is not None:
             query_attrs = np.zeros((query_num_examples, int(args.embedding_size)))
@@ -162,7 +162,7 @@ if __name__ == '__main__':
 
     if attrs is not None:
         index_attrs = np.zeros((index_num_examples, int(args.embedding_size)))
-    index_labels = np.zeros((index_num_examples, int(args.embedding_size)))
+    index_labels = np.zeros((index_num_examples))
     index_embeddings = np.zeros((index_num_examples, int(args.embedding_size)))
     steps = int(index_num_examples / embedding_batch_size)
     if index_num_examples % embedding_batch_size > 0:
