@@ -72,7 +72,7 @@ def main(cf, hyper_param_txt, hostname):
     if cf.preprocessing_name:
         image_preprocessing_fn = preprocessing_factory.get_preprocessing(cf.preprocessing_name, is_training=True)
 
-    def train_pre_process(example_proto):
+    def sampling_pre_process(example_proto):
         features = {"image/encoded": tf.FixedLenFeature((), tf.string, default_value=""),
                     "image/class/label": tf.FixedLenFeature((), tf.int64, default_value=0),
                     'image/height': tf.FixedLenFeature((), tf.int64, default_value=0),
@@ -82,7 +82,16 @@ def main(cf, hyper_param_txt, hostname):
             features["image/attr"] = tf.VarLenFeature(dtype=tf.int64)
 
         parsed_features = tf.parse_single_example(example_proto, features)
-        image = tf.image.decode_jpeg(parsed_features["image/encoded"], cf.train_image_channel)
+        image = parsed_features["image/encoded"]
+
+        label = parsed_features["image/class/label"]
+        if cf.use_attr:
+            return image, label, parsed_features["image/attr"]
+        else:
+            return image, label
+
+    def train_pre_process(img_string):
+        image = tf.image.decode_jpeg(img_string, cf.train_image_channel)
 
         if image_preprocessing_fn is not None:
             image = image_preprocessing_fn(image, cf.train_image_size, cf.train_image_size)
@@ -98,17 +107,21 @@ def main(cf, hyper_param_txt, hostname):
             image = tf.subtract(image, 0.5)
             image = tf.multiply(image, 2.0)
 
-        label = parsed_features["image/class/label"]
-        if cf.use_attr:
-            return image, label, parsed_features["image/attr"]
-        else:
-            return image, label
+        return image
+
+    string_img_pl = tf.placeholder(tf.string, (None))
+    pair_dataset = tf.data.Dataset.from_tensor_slices(string_img_pl)
+    pair_dataset = pair_dataset.map(train_pre_process, num_parallel_calls=cf.num_preprocessing_threads)
+    pair_dataset = pair_dataset.batch(cf.batch_size)
+    pair_dataset = pair_dataset.prefetch(cf.batch_size)
+    pair_iterator = pair_dataset.make_initializable_iterator()
+    pair_images = pair_iterator.get_next()
 
     steps_each_epoch = int(num_examples / cf.batch_size)
     if num_examples % cf.batch_size > 0:
         steps_each_epoch += 1
     dataset = tf.data.TFRecordDataset(files)
-    dataset = dataset.map(train_pre_process, num_parallel_calls=cf.num_preprocessing_threads)
+    dataset = dataset.map(sampling_pre_process, num_parallel_calls=cf.num_preprocessing_threads)
     dataset = dataset.shuffle(cf.shuffle_buffer_size)
     dataset = dataset.repeat()
     dataset = dataset.batch(cf.sampling_buffer_size)
@@ -136,7 +149,6 @@ def main(cf, hyper_param_txt, hostname):
     loss_op, end_points, train_op = model_fn.build_model(images_ph, labels_ph, cf, attrs_ph, True, cf.use_attr_net,
                                                          cf.num_hidden_attr_net, num_examples, global_step,
                                                          use_old_model=cf.use_old_model)
-    vars = tf.trainable_variables()
     summaries = set(tf.get_collection(tf.GraphKeys.SUMMARIES))
 
     # Add summaries for end_points.
@@ -226,14 +238,15 @@ def main(cf, hyper_param_txt, hostname):
                     label_buffer[tmp_label] = i
                     single_index_map[tmp_label] = i
             pair_indices = list(pair_indices)
-            # print(len(pair_indices))
-            # continue
             if len(pair_indices) > cf.batch_size:
                 pair_indices = pair_indices[:cf.batch_size]
             elif len(pair_indices) < cf.batch_size:
                 pair_indices += list(single_index_map.values())[:cf.batch_size - len(pair_indices)]
             # print(pair_indices)
             batch_images = tmp_images[pair_indices]
+            sess.run(pair_iterator.initializer, feed_dict={string_img_pl: batch_images})
+            batch_images = sess.run(pair_images)
+
             batch_labels = tmp_labels[pair_indices]
             if cf.use_attr:
                 batch_attrs = tmp_attrs[pair_indices]
@@ -356,8 +369,8 @@ if __name__ == '__main__':
     fl.DEFINE_string('model_name', 'inception_resnet_v2', '')
     fl.DEFINE_string('preprocessing_name', "inception", '')
     fl.DEFINE_integer('batch_size', 16, '')
-    fl.DEFINE_integer('sampling_buffer_size', 180, '')
-    fl.DEFINE_integer('shuffle_buffer_size', 360, '')
+    fl.DEFINE_integer('sampling_buffer_size', 250, '')
+    fl.DEFINE_integer('shuffle_buffer_size', 500, '')
     fl.DEFINE_integer('train_image_channel', 3, '')
     fl.DEFINE_integer('train_image_size', 299, '')
     fl.DEFINE_integer('max_number_of_steps', None, '')
