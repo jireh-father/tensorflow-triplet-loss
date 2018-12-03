@@ -7,7 +7,6 @@ import os, uuid, glob
 import util
 import faiss
 
-fl = tf.app.flags
 preprocessing_name = 'inception'
 model_name = 'inception_resnet_v2'
 checkpoint_dir = '/home/source/tensorflow-triplet-loss/experiments/dfi_inception_resnet_v2_hard'
@@ -16,7 +15,6 @@ faiss_gpu_no = '1'
 image_size = 299
 embedding_size = 128
 max_top_k = 50
-F = fl.FLAGS
 
 UPLOAD_DIR = 'static/upload'
 SEARCHED_DIR = 'static/result'
@@ -70,7 +68,6 @@ tf_config = tf.ConfigProto()
 tf_config.gpu_options.allow_growth = True
 sess = tf.Session(config=tf_config)
 sess.run(tf.global_variables_initializer())
-print(tf.train.latest_checkpoint(checkpoint_dir))
 saver.restore(sess, tf.train.latest_checkpoint(checkpoint_dir))
 
 index_embeddings = np.load(os.path.join(checkpoint_dir, "index_embeddings.npy")).astype(np.float32)

@@ -226,8 +226,8 @@ def main(cf, hyper_param_txt, hostname):
                     label_buffer[tmp_label] = i
                     single_index_map[tmp_label] = i
             pair_indices = list(pair_indices)
-            print(len(pair_indices))
-            continue
+            # print(len(pair_indices))
+            # continue
             if len(pair_indices) > cf.batch_size:
                 pair_indices = pair_indices[:cf.batch_size]
             elif len(pair_indices) < cf.batch_size:
@@ -347,7 +347,7 @@ if __name__ == '__main__':
     #######################
 
     fl.DEFINE_string('data_dir',
-                     'D:\data\\fashion\image_retrieval\cafe24multi\\tfrecord',
+                     'D:\data\\fashion\image_retrieval\mvc\images\\tfrecord',
                      '')
     # fl.DEFINE_string('data_dir',
     #                  "D:\data\\fashion\image_retrieval\cafe24product\\tfrecord_with_attr",
@@ -356,8 +356,8 @@ if __name__ == '__main__':
     fl.DEFINE_string('model_name', 'inception_resnet_v2', '')
     fl.DEFINE_string('preprocessing_name', "inception", '')
     fl.DEFINE_integer('batch_size', 16, '')
-    fl.DEFINE_integer('sampling_buffer_size', 350, '')
-    fl.DEFINE_integer('shuffle_buffer_size', 700, '')
+    fl.DEFINE_integer('sampling_buffer_size', 600, '')
+    fl.DEFINE_integer('shuffle_buffer_size', 1200, '')
     fl.DEFINE_integer('train_image_channel', 3, '')
     fl.DEFINE_integer('train_image_size', 299, '')
     fl.DEFINE_integer('max_number_of_steps', None, '')
