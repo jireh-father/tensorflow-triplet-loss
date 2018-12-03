@@ -36,6 +36,8 @@ parser.add_argument('--use_attr', default="0",
                     help="Directory containing the dataset")
 parser.add_argument('--gpu_no', default="0",
                     help="Directory containing the dataset")
+parser.add_argument('--save_static_data', default="0",
+                    help="Directory containing the dataset")
 parser.add_argument('--eval_batch_size', default=256,
                     help="Directory containing the dataset")
 parser.add_argument('--preprocessing_name', default='None',
@@ -126,59 +128,73 @@ if __name__ == '__main__':
 
     if args.restore_epoch is not None:
         restore_epoch = int(args.restore_epoch)
-        latste_checkpoint = tf.train.latest_checkpoint(args.model_dir)
-        restore_path = os.path.join(os.path.dirname(latste_checkpoint), "model.ckpt-%d" % restore_epoch)
+        latest_checkpoint = tf.train.latest_checkpoint(args.model_dir)
+        restore_path = os.path.join(os.path.dirname(latest_checkpoint), "model.ckpt-%d" % restore_epoch)
         saver.restore(sess, restore_path)
     else:
         saver.restore(sess, tf.train.latest_checkpoint(args.model_dir))
 
-    sess.run(iterator.initializer, feed_dict={files_op: query_files, num_examples_op: query_num_examples})
-    if attrs is None:
-        query_labels = sess.run(labels)
-    else:
-        query_labels, query_attrs = sess.run([labels, attrs])
+    if args.save_static_data == "1":
+        query_labels = np.zeros((query_num_examples, int(args.embedding_size)))
+        query_embeddings = np.zeros((query_num_examples, int(args.embedding_size)))
+        if attrs is not None:
+            query_attrs = np.zeros((query_num_examples, int(args.embedding_size)))
+        steps = int(query_num_examples / embedding_batch_size)
+        if query_num_examples % embedding_batch_size > 0:
+            steps += 1
+        sess.run(iterator.initializer, feed_dict={files_op: query_files, num_examples_op: embedding_batch_size})
+        for i in range(steps):
+            if attrs is None:
+                tmp_query_embeddings, tmp_query_labels = sess.run([embedding_op, labels])
+            else:
+                tmp_query_embeddings, tmp_query_labels, tmp_query_attrs = sess.run([embedding_op, labels, attrs])
 
-        print("query attrs", query_attrs.shape)
-    print("query labels", query_labels.shape)
-    query_embeddings = np.zeros((query_num_examples, int(args.embedding_size)))
-    steps = int(query_num_examples / embedding_batch_size)
-    if query_num_examples % embedding_batch_size > 0:
-        steps += 1
-    sess.run(iterator.initializer, feed_dict={files_op: query_files, num_examples_op: embedding_batch_size})
-    for i in range(steps):
-        tmp_query_embeddings = sess.run(embedding_op)
-        print("query embeddings", tmp_query_embeddings.shape)
-        for j, tmp_qe in enumerate(tmp_query_embeddings):
-            query_embeddings[i * embedding_batch_size + j] = tmp_qe
-    print(query_embeddings.shape)
+            print("query embeddings", tmp_query_embeddings.shape)
+            for j, tmp_qe in enumerate(tmp_query_embeddings):
+                if attrs is not None:
+                    query_attrs[i * embedding_batch_size + j] = tmp_query_attrs[j]
+                query_labels[i * embedding_batch_size + j] = tmp_query_labels[j]
+                query_embeddings[i * embedding_batch_size + j] = tmp_qe
+        if attrs is not None:
+            print("query attrs", query_attrs.shape)
+        print("query labels", query_labels.shape)
+        print("query embeddings", query_embeddings.shape)
 
-    sess.run(iterator.initializer, feed_dict={files_op: index_files, num_examples_op: index_num_examples})
-    if attrs is None:
-        index_labels = sess.run(labels)
-    else:
-        index_labels, index_attrs = sess.run([labels, attrs])
-
-        print("index attrs", index_attrs.shape)
-    print("index labels", index_labels.shape)
+    if attrs is not None:
+        index_attrs = np.zeros((index_num_examples, int(args.embedding_size)))
+    index_labels = np.zeros((index_num_examples, int(args.embedding_size)))
     index_embeddings = np.zeros((index_num_examples, int(args.embedding_size)))
     steps = int(index_num_examples / embedding_batch_size)
     if index_num_examples % embedding_batch_size > 0:
         steps += 1
     sess.run(iterator.initializer, feed_dict={files_op: index_files, num_examples_op: embedding_batch_size})
     for i in range(steps):
-        tmp_index_embeddings = sess.run(embedding_op)
+        if attrs is None:
+            tmp_index_embeddings, tmp_index_labels = sess.run([embedding_op, labels])
+        else:
+            tmp_index_embeddings, tmp_index_labels, tmp_index_attrs = sess.run([embedding_op, labels, attrs])
+
         print("index embeddings", tmp_index_embeddings.shape)
         for j, tmp_ie in enumerate(tmp_index_embeddings):
+            if attrs is not None:
+                index_attrs[i * embedding_batch_size + j] = tmp_index_attrs[j]
+            index_labels[i * embedding_batch_size + j] = tmp_index_labels[j]
             index_embeddings[i * embedding_batch_size + j] = tmp_ie
-    print(index_embeddings.shape)
+    if attrs is not None:
+        print("index attrs", index_attrs.shape)
+    print("index labels", index_labels.shape)
+    print("index embeddings", index_embeddings.shape)
 
     sess.close()
     tf.reset_default_graph()
 
-    np.save(os.path.join(args.model_dir, "query_embeddings.npy"), query_embeddings)
-    np.save(os.path.join(args.model_dir, "index_embeddings.npy"), index_embeddings)
-    np.save(os.path.join(args.model_dir, "query_labels.npy"), query_labels)
-    np.save(os.path.join(args.model_dir, "index_labels.npy"), index_labels)
-    if attrs is not None:
-        np.save(os.path.join(args.model_dir, "query_attrs.npy"), query_attrs)
-        np.save(os.path.join(args.model_dir, "index_attrs.npy"), index_attrs)
+    if args.save_static_data == "1":
+        np.save(os.path.join(args.model_dir, "query_embeddings.npy"), query_embeddings)
+        np.save(os.path.join(args.model_dir, "index_embeddings.npy"), index_embeddings)
+        np.save(os.path.join(args.model_dir, "query_labels.npy"), query_labels)
+        np.save(os.path.join(args.model_dir, "index_labels.npy"), index_labels)
+        if attrs is not None:
+            np.save(os.path.join(args.model_dir, "query_attrs.npy"), query_attrs)
+            np.save(os.path.join(args.model_dir, "index_attrs.npy"), index_attrs)
+    else:
+        np.save(os.path.join(args.model_dir, "index_embeddings.npy"), index_embeddings)

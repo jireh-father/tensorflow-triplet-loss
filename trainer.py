@@ -311,11 +311,11 @@ def main(cf, hyper_param_txt, hostname):
     if cf.eval_after_training:
         cuda.select_device(0)
         cuda.close()
-        eval_cmd = 'python -u multiple_search_models.py --model_dir="%s" --embedding_size=%d --data_dir="%s" --model_name=%s --max_top_k=%d --shutdown_after_train=%d --gpu_no=%s --step_type=%s --image_size=%s --eval_batch_size=%d --preprocessing_name=%s --notify_after_training=%d --use_old_model=%d' % (
+        eval_cmd = 'python -u multiple_search_models.py --model_dir="%s" --embedding_size=%d --data_dir="%s" --model_name=%s --max_top_k=%d --shutdown_after_train=%d --gpu_no=%s --step_type=%s --image_size=%s --eval_batch_size=%d --preprocessing_name=%s --notify_after_training=%d --use_old_model=%d --save_static_data=%d' % (
             cf.save_dir, cf.embedding_size, cf.data_dir, cf.model_name, cf.eval_max_top_k,
             1 if cf.shutdown_after_train else 0, cf.gpu_no, "step" if cf.use_save_steps else "epoch",
             cf.train_image_size, cf.eval_batch_size, cf.preprocessing_name, 1 if cf.notify_after_training else 0,
-            1 if cf.use_old_model else 0)
+            1 if cf.use_old_model else 0, 1 if cf.save_static_data else 0)
         print(eval_cmd)
         os.system(eval_cmd)
     else:
@@ -338,6 +338,7 @@ if __name__ == '__main__':
     fl.DEFINE_integer('eval_max_top_k', 50, '')
     fl.DEFINE_integer('eval_batch_size', 128, '')
     fl.DEFINE_boolean('notify_after_training', True, '')
+    fl.DEFINE_boolean('save_static_data', True, '')
 
     fl.DEFINE_string('gpu_no', "0", '')
 
