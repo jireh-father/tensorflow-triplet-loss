@@ -8,7 +8,7 @@ import util
 import faiss
 
 fl = tf.app.flags
-image_preprocessing_fn = 'inception'
+preprocessing_name = 'inception'
 model_name = 'inception_resnet_v2'
 checkpoint_dir = '/home/source/tensorflow-triplet-loss/experiments/dfi_inception_resnet_v2_hard'
 index_tfrecord_pattern = '/home/data/deepfashion-inshop/*index*.tfrecord'
@@ -27,7 +27,7 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_DIR
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
-image_preprocessing_fn = preprocessing_factory.get_preprocessing(F.image_preprocessing_fn, is_training=False)
+image_preprocessing_fn = preprocessing_factory.get_preprocessing(preprocessing_name, is_training=False)
 
 
 def _dataset_preprocess(example_proto):
@@ -39,7 +39,7 @@ def _dataset_preprocess(example_proto):
     parsed_features = tf.parse_single_example(example_proto, features)
     image = tf.image.decode_jpeg(parsed_features["image/encoded"], 3)
 
-    image = image_preprocessing_fn(image, F.image_size, F.image_size)
+    image = image_preprocessing_fn(image, image_size, image_size)
 
     label = parsed_features["image/class/label"]
     label_name = parsed_features["image/class/name"]
@@ -49,7 +49,7 @@ def _dataset_preprocess(example_proto):
 def _image_file_preprocess(filename):
     image_string = tf.read_file(filename)
     image = tf.image.decode_jpeg(image_string, channels=3)
-    image = image_preprocessing_fn(image, F.image_size, F.image_size)
+    image = image_preprocessing_fn(image, image_size, image_size)
 
     return image
 
@@ -61,7 +61,7 @@ dataset = dataset.batch(1)
 iterator = dataset.make_initializable_iterator()
 images_op = iterator.get_next()
 
-model_f = nets_factory.get_network_fn(F.model_name, F.embedding_size, is_training=False)
+model_f = nets_factory.get_network_fn(model_name, embedding_size, is_training=False)
 with tf.variable_scope('model'):
     embeddings_op, _ = model_f(images_op)
 saver = tf.train.Saver(tf.global_variables())
@@ -70,18 +70,18 @@ tf_config = tf.ConfigProto()
 tf_config.gpu_options.allow_growth = True
 sess = tf.Session(config=tf_config)
 sess.run(tf.global_variables_initializer())
-print(tf.train.latest_checkpoint(F.checkpoint_dir))
-saver.restore(sess, tf.train.latest_checkpoint(F.checkpoint_dir))
+print(tf.train.latest_checkpoint(checkpoint_dir))
+saver.restore(sess, tf.train.latest_checkpoint(checkpoint_dir))
 
-index_embeddings = np.load(os.path.join(F.checkpoint_dir, "index_embeddings.npy")).astype(np.float32)
-index_labels = np.load(os.path.join(F.checkpoint_dir, "index_labels.npy"))
+index_embeddings = np.load(os.path.join(checkpoint_dir, "index_embeddings.npy")).astype(np.float32)
+index_labels = np.load(os.path.join(checkpoint_dir, "index_labels.npy"))
 
-db_index = faiss.IndexFlatL2(int(F.embedding_size))
-if F.faiss_gpu_no != "":
+db_index = faiss.IndexFlatL2(int(embedding_size))
+if faiss_gpu_no != "":
     db_index = faiss.index_cpu_to_all_gpus(  # build the index
         db_index
     )
-max_top_k = int(F.max_top_k)
+max_top_k = int(max_top_k)
 db_index.add(index_embeddings)  # add vectors to the index
 print(db_index.ntotal)
 
@@ -125,7 +125,7 @@ def search():
     searched_dist_list, searched_idx_list = db_index.search(embeddings, max_top_k)
     print("end search!")
 
-    result_images = util.get_images_by_indices(glob.glob(F.index_tfrecord_pattern), list(searched_idx_list[0]),
+    result_images = util.get_images_by_indices(glob.glob(index_tfrecord_pattern), list(searched_idx_list[0]),
                                                return_array=False)
     sub_dir = os.path.basename(file_path).split("_")[0]
     result_file_names = []
