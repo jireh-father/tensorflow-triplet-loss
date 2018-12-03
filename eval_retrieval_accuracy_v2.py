@@ -136,53 +136,65 @@ if __name__ == '__main__':
 
     if args.save_static_data == "1":
         query_labels = np.zeros((query_num_examples), dtype=np.int16)
-        query_embeddings = np.zeros((query_num_examples, int(args.embedding_size)))
         if attrs is not None:
             query_attrs = np.zeros((query_num_examples, int(args.embedding_size)))
-        steps = int(query_num_examples / embedding_batch_size)
-        if query_num_examples % embedding_batch_size > 0:
-            steps += 1
-        sess.run(iterator.initializer, feed_dict={files_op: query_files, num_examples_op: embedding_batch_size})
-        for i in range(steps):
+    query_embeddings = np.zeros((query_num_examples, int(args.embedding_size)))
+
+    steps = int(query_num_examples / embedding_batch_size)
+    if query_num_examples % embedding_batch_size > 0:
+        steps += 1
+    sess.run(iterator.initializer, feed_dict={files_op: query_files, num_examples_op: embedding_batch_size})
+    for i in range(steps):
+        if args.save_static_data == "1":
             if attrs is None:
                 tmp_query_embeddings, tmp_query_labels = sess.run([embedding_op, labels])
             else:
                 tmp_query_embeddings, tmp_query_labels, tmp_query_attrs = sess.run([embedding_op, labels, attrs])
+        else:
+            tmp_query_embeddings = sess.run(embedding_op)
 
-            print("query embeddings", tmp_query_embeddings.shape)
-            for j, tmp_qe in enumerate(tmp_query_embeddings):
+        print("query embeddings", tmp_query_embeddings.shape)
+        for j, tmp_qe in enumerate(tmp_query_embeddings):
+            if args.save_static_data == "1":
                 if attrs is not None:
                     query_attrs[i * embedding_batch_size + j] = tmp_query_attrs[j]
                 query_labels[i * embedding_batch_size + j] = tmp_query_labels[j]
-                query_embeddings[i * embedding_batch_size + j] = tmp_qe
+            query_embeddings[i * embedding_batch_size + j] = tmp_qe
+    if args.save_static_data == "1":
         if attrs is not None:
             print("query attrs", query_attrs.shape)
         print("query labels", query_labels.shape)
-        print("query embeddings", query_embeddings.shape)
+    print("query embeddings", query_embeddings.shape)
 
-    if attrs is not None:
-        index_attrs = np.zeros((index_num_examples, int(args.embedding_size)))
-    index_labels = np.zeros((index_num_examples), dtype=np.int16)
+    if args.save_static_data == "1":
+        if attrs is not None:
+            index_attrs = np.zeros((index_num_examples, int(args.embedding_size)))
+        index_labels = np.zeros((index_num_examples), dtype=np.int16)
     index_embeddings = np.zeros((index_num_examples, int(args.embedding_size)))
     steps = int(index_num_examples / embedding_batch_size)
     if index_num_examples % embedding_batch_size > 0:
         steps += 1
     sess.run(iterator.initializer, feed_dict={files_op: index_files, num_examples_op: embedding_batch_size})
     for i in range(steps):
-        if attrs is None:
-            tmp_index_embeddings, tmp_index_labels = sess.run([embedding_op, labels])
+        if args.save_static_data == "1":
+            if attrs is None:
+                tmp_index_embeddings, tmp_index_labels = sess.run([embedding_op, labels])
+            else:
+                tmp_index_embeddings, tmp_index_labels, tmp_index_attrs = sess.run([embedding_op, labels, attrs])
         else:
-            tmp_index_embeddings, tmp_index_labels, tmp_index_attrs = sess.run([embedding_op, labels, attrs])
+            tmp_index_embeddings = sess.run(embedding_op)
 
         print("index embeddings", tmp_index_embeddings.shape)
         for j, tmp_ie in enumerate(tmp_index_embeddings):
-            if attrs is not None:
-                index_attrs[i * embedding_batch_size + j] = tmp_index_attrs[j]
-            index_labels[i * embedding_batch_size + j] = tmp_index_labels[j]
+            if args.save_static_data == "1":
+                if attrs is not None:
+                    index_attrs[i * embedding_batch_size + j] = tmp_index_attrs[j]
+                index_labels[i * embedding_batch_size + j] = tmp_index_labels[j]
             index_embeddings[i * embedding_batch_size + j] = tmp_ie
-    if attrs is not None:
-        print("index attrs", index_attrs.shape)
-    print("index labels", index_labels.shape)
+    if args.save_static_data == "1":
+        if attrs is not None:
+            print("index attrs", index_attrs.shape)
+        print("index labels", index_labels.shape)
     print("index embeddings", index_embeddings.shape)
 
     sess.close()
@@ -197,4 +209,5 @@ if __name__ == '__main__':
             np.save(os.path.join(args.model_dir, "query_attrs.npy"), query_attrs)
             np.save(os.path.join(args.model_dir, "index_attrs.npy"), index_attrs)
     else:
+        np.save(os.path.join(args.model_dir, "query_embeddings.npy"), query_embeddings)
         np.save(os.path.join(args.model_dir, "index_embeddings.npy"), index_embeddings)
