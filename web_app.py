@@ -132,6 +132,8 @@ def search():
     result_file_names = []
     for i, result_image in enumerate(result_images):
         result_file_name = os.path.join(SEARCHED_DIR, sub_dir, "%3d.jpg" % i)
+        if not os.path.isdir(os.path.dirname(result_file_name)):
+            os.makedirs(os.path.dirname(result_file_name))
         result_file_names.append(result_file_name)
         result_image.save(result_file_name)
     return render_template("search.html", query_file_name=request.args['file_name'], result_sub_dir=sub_dir,
