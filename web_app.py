@@ -78,6 +78,7 @@ index_labels = np.load(os.path.join(checkpoint_dir, "index_labels.npy"))
 
 db_index = faiss.IndexFlatL2(int(embedding_size))
 if faiss_gpu_no != "":
+    os.environ["CUDA_VISIBLE_DEVICES"] = faiss_gpu_no
     db_index = faiss.index_cpu_to_all_gpus(  # build the index
         db_index
     )
