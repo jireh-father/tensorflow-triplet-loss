@@ -335,7 +335,7 @@ if __name__ == '__main__':
     fl.DEFINE_integer('save_interval_epochs', 2, '')
     fl.DEFINE_boolean('shutdown_after_train', False, '')
     fl.DEFINE_boolean('eval_after_training', True, '')
-    fl.DEFINE_integer('eval_max_top_k', 50, '')
+    fl.DEFINE_integer('eval_max_top_k', 20, '')
     fl.DEFINE_integer('eval_batch_size', 128, '')
     fl.DEFINE_boolean('notify_after_training', True, '')
     fl.DEFINE_boolean('save_static_data', True, '')
