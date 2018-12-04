@@ -58,7 +58,7 @@ if __name__ == '__main__':
     print("CUDA Visible device", device_lib.list_local_devices())
 
     image_preprocessing_fn = None
-    if args.preprocessing_name != 'None':
+    if args.preprocessing_name:
         image_preprocessing_fn = preprocessing_factory.get_preprocessing(args.preprocessing_name, is_training=False)
 
     args.image_size = int(args.image_size)

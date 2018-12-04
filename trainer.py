@@ -31,7 +31,6 @@ notify_params = [
     "shuffle_buffer_size",
     "train_image_size",
     "shutdown_after_train",
-    "eval_batch_size",
     "keep_checkpoint_max",
     "embedding_size",
     "triplet_strategy",
@@ -347,7 +346,7 @@ if __name__ == '__main__':
     #######################
 
     fl.DEFINE_string('data_dir',
-                     'D:\data\\fashion\image_retrieval\images_for_tfrecord\street2shop\\tfrecord',
+                     'D:\data\\fashion\image_retrieval\cafe24multi\\tfrecord',
                      '')
     # fl.DEFINE_string('data_dir',
     #                  "D:\data\\fashion\image_retrieval\cafe24product\\tfrecord_with_attr",
@@ -356,8 +355,8 @@ if __name__ == '__main__':
     fl.DEFINE_string('model_name', 'inception_resnet_v2', '')
     fl.DEFINE_string('preprocessing_name', "inception", '')
     fl.DEFINE_integer('batch_size', 16, '')
-    fl.DEFINE_integer('sampling_buffer_size', 180, '')
-    fl.DEFINE_integer('shuffle_buffer_size', 360, '')
+    fl.DEFINE_integer('sampling_buffer_size', 300, '')
+    fl.DEFINE_integer('shuffle_buffer_size', 600, '')
     fl.DEFINE_integer('train_image_channel', 3, '')
     fl.DEFINE_integer('train_image_size', 299, '')
     fl.DEFINE_integer('max_number_of_steps', None, '')
