@@ -40,6 +40,8 @@ parser.add_argument('--use_old_model', default='0',
                     help="Directory containing the dataset")
 parser.add_argument('--save_static_data', default="0",
                     help="Directory containing the dataset")
+parser.add_argument('--num_preprocessing_threads', default=4,
+                    help="Directory containing the dataset")
 
 server_map = {"ip-172-31-12-89": "p3.2xlarge", "ip-172-31-29-214": "p3.8xlarge"}
 
@@ -54,10 +56,10 @@ def main(args, hostname):
         model_epochs = [int(e) for e in args.epoch_list.split(",")]
     model_epochs.sort()
     for idx, i in enumerate(model_epochs):
-        eval_cmd = 'python eval_retrieval_accuracy_v2.py --model_dir="%s" --data_dir="%s" --restore_epoch=%d --embedding_size=%d --model_name=%s --gpu_no=%s --image_size=%d --eval_batch_size=%d --preprocessing_name=%s --use_old_model=%s --save_static_data=%s' % (
+        eval_cmd = 'python eval_retrieval_accuracy_v2.py --model_dir="%s" --data_dir="%s" --restore_epoch=%d --embedding_size=%d --model_name=%s --gpu_no=%s --image_size=%d --eval_batch_size=%d --preprocessing_name=%s --use_old_model=%s --save_static_data=%s, --num_preprocessing_threads=%d' % (
             args.model_dir, args.data_dir, i, int(args.embedding_size), args.model_name, args.gpu_no, int(
                 args.image_size), int(args.eval_batch_size), args.preprocessing_name, args.use_old_model,
-            (args.save_static_data if idx == 0 else "0"))
+            (args.save_static_data if idx == 0 else "0"), int(args.num_preprocessing_threads))
         print(eval_cmd)
         os.system(eval_cmd)
         search_cmd = 'python search_faiss.py  --model_dir="%s" --data_dir="%s" --restore_epoch=%d --embedding_size=%d --max_top_k=%d --gpu_no=%s' % (

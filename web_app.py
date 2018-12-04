@@ -15,7 +15,7 @@ faiss_gpu_no = '1'
 image_size = 299
 embedding_size = 128
 max_top_k = 50
-
+num_preprocessing_threads = 4
 UPLOAD_DIR = 'static/upload'
 SEARCHED_DIR = 'static/result'
 ALLOWED_EXTENSIONS = ['jpg']
@@ -54,7 +54,7 @@ def _image_file_preprocess(filename):
 
 file_names = tf.placeholder(tf.string, shape=[None], name="file_names")
 dataset = tf.data.Dataset.from_tensor_slices(file_names)
-dataset = dataset.map(_image_file_preprocess)
+dataset = dataset.map(_image_file_preprocess, num_parallel_calls=num_preprocessing_threads)
 dataset = dataset.batch(1)
 iterator = dataset.make_initializable_iterator()
 images_op = iterator.get_next()

@@ -14,6 +14,7 @@ index_tfrecord_pattern = '/home/data/deepfashion-inshop/*index*.tfrecord'
 image_size = 299
 num_classes = 14
 gpu_no = "0"
+num_preprocessing_threads = 4
 
 label_map = {0: "conservative",
              1: "dressy",
@@ -52,7 +53,7 @@ def _image_file_preprocess(filename):
 
 file_names = tf.placeholder(tf.string, shape=[None], name="file_names")
 dataset = tf.data.Dataset.from_tensor_slices(file_names)
-dataset = dataset.map(_image_file_preprocess)
+dataset = dataset.map(_image_file_preprocess, num_parallel_calls=num_preprocessing_threads)
 dataset = dataset.batch(1)
 iterator = dataset.make_initializable_iterator()
 images_op = iterator.get_next()

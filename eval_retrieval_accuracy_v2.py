@@ -44,6 +44,8 @@ parser.add_argument('--preprocessing_name', default='None',
                     help="Directory containing the dataset")
 parser.add_argument('--use_old_model', default='0',
                     help="Directory containing the dataset")
+parser.add_argument('--num_preprocessing_threads', default=4,
+                    help="Directory containing the dataset")
 
 if __name__ == '__main__':
     tf.logging.set_verbosity(tf.logging.INFO)
@@ -98,7 +100,7 @@ if __name__ == '__main__':
     files_op = tf.placeholder(tf.string, shape=[None], name="files")
     num_examples_op = tf.placeholder(tf.int64, shape=(), name="num_examples")
     dataset = tf.data.TFRecordDataset(files_op)
-    dataset = dataset.map(train_pre_process)
+    dataset = dataset.map(train_pre_process, num_parallel_calls=int(args.num_preprocessing_threads))
     dataset = dataset.batch(num_examples_op)
     iterator = dataset.make_initializable_iterator()
     if args.use_attr:
