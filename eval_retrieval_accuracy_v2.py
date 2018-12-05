@@ -40,7 +40,7 @@ parser.add_argument('--save_static_data', default="0",
                     help="Directory containing the dataset")
 parser.add_argument('--eval_batch_size', default=256,
                     help="Directory containing the dataset")
-parser.add_argument('--preprocessing_name', default='None',
+parser.add_argument('--preprocessing_name', default='',
                     help="Directory containing the dataset")
 parser.add_argument('--use_old_model', default='0',
                     help="Directory containing the dataset")
@@ -58,7 +58,7 @@ if __name__ == '__main__':
     print("CUDA Visible device", device_lib.list_local_devices())
 
     image_preprocessing_fn = None
-    if args.preprocessing_name:
+    if args.preprocessing_name != "":
         image_preprocessing_fn = preprocessing_factory.get_preprocessing(args.preprocessing_name, is_training=False)
 
     args.image_size = int(args.image_size)
