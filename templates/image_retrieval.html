@@ -6,9 +6,46 @@
 </head>
 <body>
 <h1>이미지 검색</h1>
-<form method="post" enctype="multipart/form-data" action="/upload">
-    <p><input type=file name=file>
-        <input type=submit value=Upload>
+<form method="get" enctype="multipart/form-data" action="/">
+    <h2>모델 선택</h2>
+    <select name="model_path">
+
+        {% if not loaded_model %}
+        <option>none</option>
+        {% endif %}
+        {% for model in model_list %}
+        <option>{{ model }}</option>
+        {% endfor %}
+    </select>
+    <p>
+        preprocessing_name <input type="text" value="{{preprocessing_name}}" name="preprocessing_name"/>
+        model_name <input type="text" value="{{model_name}}" name="model_name"/>
+    </p>
+    <p>
+        image_size <input type="text" value="{{image_size}}" name="image_size"/>
+        embedding_size <input type="text" value="{{embedding_size}}" name="embedding_size"/>
+        max_top_k <input type="text" value="{{max_top_k}}" name="max_top_k"/>
+        num_preprocessing_threads <input type="text" value="{{num_preprocessing_threads}}"
+                                         name="num_preprocessing_threads"/>
+        use_old_model <input type="checkbox" name="use_old_model"
+                             {% if use_old_model %}
+                             checked="checked"
+                             {% endif%}/>
+    </p>
+    <p>
+        dataset pattern <input type="text" value="{{dataset_pattern}}" name="dataset_pattern" style="width:300px;"/>
+    </p>
+    <p>
+        gpu no <input type="text" value="{{gpu_no}}" name="gpu_no"/>
+    </p>
+    <input type="submit" value="select model">
 </form>
+{% if loaded_model %}
+<form method="post" enctype="multipart/form-data" action="/upload">
+    <h2>이미지 업로드</h2>
+    <input type=file name=file>
+    <input type=submit value=Upload>
+</form>
+{% endif %}
 </body>
 </html>

@@ -3,90 +3,140 @@ import tensorflow as tf
 from preprocessing import preprocessing_factory
 from model import nets_factory
 import numpy as np
+from numba import cuda
 import os, uuid, glob
 import util
+
 import faiss
 
-preprocessing_name = 'inception'
-model_name = 'inception_resnet_v2'
-checkpoint_dir = '/home/source/tensorflow-triplet-loss/experiments/dfi_inception_resnet_v2_hard'
-index_tfrecord_pattern = '/home/data/deepfashion-inshop/*index*.tfrecord'
-faiss_gpu_no = '1'
-image_size = 299
-embedding_size = 128
-max_top_k = 50
-num_preprocessing_threads = 4
+checkpoint_dir = './experiments/'
 UPLOAD_DIR = 'static/upload'
 SEARCHED_DIR = 'static/result'
 ALLOWED_EXTENSIONS = ['jpg']
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = UPLOAD_DIR
-os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
-image_preprocessing_fn = preprocessing_factory.get_preprocessing(preprocessing_name, is_training=False)
+cp_dirs = glob.glob(os.path.join(checkpoint_dir, "*"))
+model_list = [os.path.basename(cp_d) for cp_d in cp_dirs if os.path.isdir(cp_d)]
+loaded_model = None
 
+sess = None
+iterator = None
+embeddings_op = None
+db_index = None
+file_names = None
 
-def _dataset_preprocess(example_proto):
-    features = {"image/encoded": tf.FixedLenFeature((), tf.string, default_value=""),
-                "image/class/label": tf.FixedLenFeature((), tf.int64, default_value=0),
-                "image/class/name": tf.FixedLenFeature((), tf.string, default_value="")
-                }
-
-    parsed_features = tf.parse_single_example(example_proto, features)
-    image = tf.image.decode_jpeg(parsed_features["image/encoded"], 3)
-
-    image = image_preprocessing_fn(image, image_size, image_size)
-
-    label = parsed_features["image/class/label"]
-    label_name = parsed_features["image/class/name"]
-    return image, label, label_name
+dataset_pattern = None
+max_top_k = 20
 
 
-def _image_file_preprocess(filename):
-    image_string = tf.read_file(filename)
-    image = tf.image.decode_jpeg(image_string, channels=3)
-    image = image_preprocessing_fn(image, image_size, image_size)
+def _load_model(model_name="inception_resnet_v2", preprocessing_name="inception", faiss_gpu_no=0, image_size=299,
+                embedding_size=128, num_preprocessing_threads=4, use_old_model=False, cp_dir=None):
+    global sess
+    global iterator
+    global embeddings_op
+    global db_index
+    global file_names
 
-    return image
+    if sess is not None:
+        sess.close()
+        tf.reset_default_graph()
+        cuda.select_device(0)
+        cuda.close()
+    os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+    os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
+    image_preprocessing_fn = preprocessing_factory.get_preprocessing(preprocessing_name, is_training=False)
 
-file_names = tf.placeholder(tf.string, shape=[None], name="file_names")
-dataset = tf.data.Dataset.from_tensor_slices(file_names)
-dataset = dataset.map(_image_file_preprocess, num_parallel_calls=num_preprocessing_threads)
-dataset = dataset.batch(1)
-iterator = dataset.make_initializable_iterator()
-images_op = iterator.get_next()
+    def _image_file_preprocess(filename):
+        image_string = tf.read_file(filename)
+        image = tf.image.decode_jpeg(image_string, channels=3)
+        image = image_preprocessing_fn(image, image_size, image_size)
 
-model_f = nets_factory.get_network_fn(model_name, embedding_size, is_training=False)
-with tf.variable_scope('model'):
-    embeddings_op, _ = model_f(images_op)
-saver = tf.train.Saver(tf.global_variables())
+        return image
 
-tf_config = tf.ConfigProto()
-tf_config.gpu_options.allow_growth = True
-sess = tf.Session(config=tf_config)
-sess.run(tf.global_variables_initializer())
-saver.restore(sess, tf.train.latest_checkpoint(checkpoint_dir))
+    file_names = tf.placeholder(tf.string, shape=[None], name="file_names")
+    dataset = tf.data.Dataset.from_tensor_slices(file_names)
+    dataset = dataset.map(_image_file_preprocess, num_parallel_calls=num_preprocessing_threads)
+    dataset = dataset.batch(1)
+    iterator = dataset.make_initializable_iterator()
+    images_op = iterator.get_next()
 
-index_embeddings = np.load(os.path.join(checkpoint_dir, "index_embeddings.npy")).astype(np.float32)
-index_labels = np.load(os.path.join(checkpoint_dir, "index_labels.npy"))
+    model_f = nets_factory.get_network_fn(model_name, embedding_size, is_training=False)
+    if use_old_model:
+        with tf.variable_scope('model'):
+            embeddings_op, _ = model_f(images_op)
+    else:
+        embeddings_op, _ = model_f(images_op)
+    saver = tf.train.Saver(tf.global_variables())
 
-db_index = faiss.IndexFlatL2(int(embedding_size))
-if faiss_gpu_no != "":
-    os.environ["CUDA_VISIBLE_DEVICES"] = faiss_gpu_no
-    db_index = faiss.index_cpu_to_all_gpus(  # build the index
-        db_index
-    )
-max_top_k = int(max_top_k)
-db_index.add(index_embeddings)  # add vectors to the index
-print(db_index.ntotal)
+    tf_config = tf.ConfigProto()
+    tf_config.gpu_options.allow_growth = True
+    sess = tf.Session(config=tf_config)
+    sess.run(tf.global_variables_initializer())
+
+    saver.restore(sess, tf.train.latest_checkpoint(cp_dir))
+
+    index_embeddings = np.load(os.path.join(cp_dir, "index_embeddings.npy")).astype(np.float32)
+
+    db_index = faiss.IndexFlatL2(int(embedding_size))
+    if faiss_gpu_no != "":
+        os.environ["CUDA_VISIBLE_DEVICES"] = faiss_gpu_no
+        db_index = faiss.index_cpu_to_all_gpus(  # build the index
+            db_index
+        )
+    db_index.add(index_embeddings)  # add vectors to the index
+    print(db_index.ntotal)
 
 
 @app.route("/")
 def main_page():
-    return render_template("image_retrieval.html")
+    global loaded_model
+    global dataset_pattern
+    global max_top_k
+
+    preprocessing_name = 'inception'
+    model_name = 'inception_resnet_v2'
+    dataset_pattern = '/home/data/deepfashion-inshop/*index*.tfrecord'
+    gpu_no = '0'
+    image_size = 299
+    embedding_size = 128
+    max_top_k = 20
+    num_preprocessing_threads = 4
+    use_old_model = False
+
+    print(request.args)
+
+    if 'gpu_no' in request.args:
+        gpu_no = request.args["gpu_no"]
+    if 'model_name' in request.args:
+        model_name = request.args["model_name"]
+    if 'dataset_pattern' in request.args:
+        dataset_pattern = request.args["dataset_pattern"]
+    if 'image_size' in request.args:
+        image_size = int(request.args["image_size"])
+    if 'embedding_size' in request.args:
+        embedding_size = int(request.args["embedding_size"])
+    if 'max_top_k' in request.args:
+        max_top_k = int(request.args["max_top_k"])
+    if 'num_preprocessing_threads' in request.args:
+        num_preprocessing_threads = int(request.args["num_preprocessing_threads"])
+    if 'use_old_model' in request.args:
+        use_old_model = True
+
+    if 'model_path' in request.args and request.args["model_path"] != "none":
+        try:
+            _load_model(model_name, preprocessing_name, gpu_no, image_size, embedding_size, num_preprocessing_threads,
+                        use_old_model, os.path.join(checkpoint_dir, request.args["model_path"]))
+            loaded_model = request.args["model_path"]
+        except:
+            loaded_model = None
+    return render_template("image_retrieval.html", model_list=model_list, loaded_model=loaded_model, gpu_no=gpu_no,
+                           preprocessing_name=preprocessing_name, model_name=model_name,
+                           dataset_pattern=dataset_pattern, image_size=image_size, embedding_size=embedding_size,
+                           max_top_k=max_top_k, num_preprocessing_threads=num_preprocessing_threads,
+                           use_old_model=use_old_model)
 
 
 @app.route('/upload', methods=['GET', 'POST'])
@@ -123,7 +173,7 @@ def search():
     searched_dist_list, searched_idx_list = db_index.search(embeddings, max_top_k)
     print("end search!")
 
-    result_images = util.get_images_by_indices(glob.glob(index_tfrecord_pattern), list(searched_idx_list[0]),
+    result_images = util.get_images_by_indices(glob.glob(dataset_pattern), list(searched_idx_list[0]),
                                                return_array=False)
     sub_dir = os.path.basename(file_path).split("_")[0]
     result_file_names = []
