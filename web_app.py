@@ -40,13 +40,15 @@ def _load_model(model_name="inception_resnet_v2", preprocessing_name="inception"
     global file_names
 
     if sess is not None:
+        print("memory and sess init")
         sess.close()
         tf.reset_default_graph()
         cuda.select_device(0)
         cuda.close()
+        print("completed to int memory and sess")
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
     os.environ["CUDA_VISIBLE_DEVICES"] = ""
-
+    print("start to restore model")
     image_preprocessing_fn = preprocessing_factory.get_preprocessing(preprocessing_name, is_training=False)
 
     def _image_file_preprocess(filename):
@@ -77,7 +79,9 @@ def _load_model(model_name="inception_resnet_v2", preprocessing_name="inception"
     sess.run(tf.global_variables_initializer())
 
     saver.restore(sess, tf.train.latest_checkpoint(cp_dir))
+    print("end to restore model")
 
+    print("start to load faiss")
     index_embeddings = np.load(os.path.join(cp_dir, "index_embeddings.npy")).astype(np.float32)
 
     db_index = faiss.IndexFlatL2(int(embedding_size))
@@ -88,6 +92,7 @@ def _load_model(model_name="inception_resnet_v2", preprocessing_name="inception"
         )
     db_index.add(index_embeddings)  # add vectors to the index
     print(db_index.ntotal)
+    print("end to load faiss")
 
 
 @app.route("/")
@@ -173,8 +178,10 @@ def search():
     searched_dist_list, searched_idx_list = db_index.search(embeddings, max_top_k)
     print("end search!")
 
+    print("start to get images!")
     result_images = util.get_images_by_indices(glob.glob(dataset_pattern), list(searched_idx_list[0]),
                                                return_array=False)
+    print("end to get images!")
     sub_dir = os.path.basename(file_path).split("_")[0]
     result_file_names = []
     for i, result_image in enumerate(result_images):

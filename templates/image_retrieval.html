@@ -14,7 +14,9 @@
         <option>none</option>
         {% endif %}
         {% for model in model_list %}
-        <option>{{ model }}</option>
+        <option
+                {%if model== loaded_model %}selected="selected" {% endif %}}>{{ model }}
+        </option>
         {% endfor %}
     </select>
     <p>
