@@ -60,7 +60,7 @@ if __name__ == '__main__':
 
     for i, q_label in enumerate(query_labels):
         searched_indices = index_labels[search_idx[i]]
-        searched_distances = search_d[searched_indices]
+        # searched_distances = search_d[searched_indices]
         tmp_dist = [str(d) for d in search_d[i]]
         is_true = False
         for j in range(1, max_top_k + 1):
