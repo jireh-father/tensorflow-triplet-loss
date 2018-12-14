@@ -346,7 +346,26 @@ def build_model(features, labels, cf, attrs=None, is_training=True, use_attr_net
         loss = batch_hard_triplet_loss(labels, embeddings, margin=cf.margin, attrs=attrs,
                                        attr_weight=cf.attr_loss_weight,
                                        squared=cf.squared)
-
+    elif cf.triplet_strategy == "semihard":
+        loss = tf.contrib.losses.metric_learning.triplet_semihard_loss(labels, embeddings, margin=cf.margin)
+    elif cf.triplet_strategy == "cluster":
+        loss = tf.contrib.losses.metric_learning.cluster_loss(
+            labels,
+            embeddings,
+            1.0
+        )
+    elif cf.triplet_strategy == "contrastive":
+        pass
+    elif cf.triplet_strategy == "lifted_struct":
+        loss = tf.contrib.losses.metric_learning.lifted_struct_loss(
+            labels,
+            embeddings,
+            margin=cf.margin
+        )
+    elif cf.triplet_strategy == "npairs":
+        pass
+    elif cf.triplet_strategy == "npairs_multilabel":
+        pass
     else:
         raise ValueError("Triplet strategy not recognized: {}".format(cf.triplet_strategy))
 

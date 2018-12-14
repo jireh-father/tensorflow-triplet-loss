@@ -308,6 +308,7 @@ def main(cf, hyper_param_txt, hostname):
         util.send_msg_to_slack("\n\n==================================\nTraining is Done\n" + txt)
 
     if cf.eval_after_training:
+
         cuda.select_device(0)
         cuda.close()
         eval_cmd = 'python -u multiple_search_models.py --model_dir="%s" --embedding_size=%d --data_dir="%s" --model_name=%s --max_top_k=%d --shutdown_after_train=%d --gpu_no=%s --step_type=%s --image_size=%s --eval_batch_size=%d --preprocessing_name="%s" --notify_after_training=%d --use_old_model=%d --save_static_data=%d --num_preprocessing_threads=%d' % (
@@ -324,11 +325,10 @@ def main(cf, hyper_param_txt, hostname):
 
 if __name__ == '__main__':
     fl = tf.app.flags
-
     fl.DEFINE_string('save_dir', 'experiments/test', '')
     fl.DEFINE_integer('num_preprocessing_threads', 4, '')
-    fl.DEFINE_integer('log_every_n_steps', 10, 'The frequency with which logs are print.')
-    fl.DEFINE_integer('save_summaries_steps', 10, '')
+    fl.DEFINE_integer('log_every_n_steps', 1, 'The frequency with which logs are print.')
+    fl.DEFINE_integer('save_summaries_steps', 100, '')
     fl.DEFINE_boolean('use_save_steps', False, '')
     fl.DEFINE_integer('save_interval_steps', 10000, '')
     fl.DEFINE_integer('save_interval_epochs', 2, '')
@@ -346,7 +346,7 @@ if __name__ == '__main__':
     #######################
 
     fl.DEFINE_string('data_dir',
-                     'D:\data\\fashion\image_retrieval\cafe24multi\\tfrecord',
+                     'D:\data\\fashion\image_retrieval\deep_fashion\consumer-to-shop\\tfrecord',
                      '')
     # fl.DEFINE_string('data_dir',
     #                  "D:\data\\fashion\image_retrieval\cafe24product\\tfrecord_with_attr",
@@ -354,9 +354,9 @@ if __name__ == '__main__':
 
     fl.DEFINE_string('model_name', 'inception_resnet_v2', '')
     fl.DEFINE_string('preprocessing_name', "inception", '')
-    fl.DEFINE_integer('batch_size', 16, '')
-    fl.DEFINE_integer('sampling_buffer_size', 300, '')
-    fl.DEFINE_integer('shuffle_buffer_size', 600, '')
+    fl.DEFINE_integer('batch_size', 8, '')
+    fl.DEFINE_integer('sampling_buffer_size', 400, '')
+    fl.DEFINE_integer('shuffle_buffer_size', 800, '')
     fl.DEFINE_integer('train_image_channel', 3, '')
     fl.DEFINE_integer('train_image_size', 299, '')
     fl.DEFINE_integer('max_number_of_steps', None, '')
@@ -367,7 +367,7 @@ if __name__ == '__main__':
     # Triplet #
     #######################
     fl.DEFINE_integer('embedding_size', 128, '')
-    fl.DEFINE_string('triplet_strategy', 'batch_hard', '')
+    fl.DEFINE_string('triplet_strategy', 'cluster', '')
     fl.DEFINE_float('margin', 0.5, '')
     fl.DEFINE_boolean('squared', False, '')
     fl.DEFINE_boolean('l2norm', False, '')
