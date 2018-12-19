@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <title>Image Retrieval Using Deep Learning</title>
+    <link href="{{url_for('static', filename='cropperjs/cropper.css')}}" rel="stylesheet">
+    <script src="{{url_for('static', filename='cropperjs/cropper.js')}}"></script>
 </head>
 <body>
 <h1>이미지 검색</h1>
@@ -49,5 +51,10 @@
     <input type=submit value=Upload>
 </form>
 {% endif %}
+<form method="post" enctype="multipart/form-data" action="/crop_upload">
+    <h2>이미지 업로드 crop</h2>
+    <input type=file name=file>
+    <input type=submit value=Upload>
+</form>
 </body>
 </html>

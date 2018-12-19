@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Image Retrieval Using Deep Learning</title>
+    <link href="{{url_for('static', filename='cropperjs/cropper.css')}}" rel="stylesheet">
+    <script src="{{url_for('static', filename='cropperjs/cropper.js')}}"></script>
+</head>
+<body>
+<h1>query</h1>
+<img width="299" height="299" id="image"
+     src="{{url_for('static', filename='upload')}}/{{query_file_name}}"/>
+<form method="get" action="/do_crop_search">
+    <input type="text" id="x" name="x"/>
+    <input type="text" id="y" name="y"/>
+    <input type="text" id="w" name="w"/>
+    <input type="text" id="h" name="h"/>
+    <input type="hidden" name="file_name" value="{{query_file_name}}"/>
+    <input type="submit" value="search"/>
+</form>
+<script>
+
+const image = document.getElementById('image');
+const cropper = new Cropper(image, {
+  crop(event) {
+    document.getElementById("x").value =event.detail.x
+    document.getElementById("y").value =event.detail.y
+    document.getElementById("w").value =event.detail.width
+    document.getElementById("h").value =event.detail.height
+  },
+});
+
+
+
+
+
+
+
+
+
+
+
+</script>
+</body>
+</html>

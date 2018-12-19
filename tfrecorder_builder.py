@@ -247,9 +247,9 @@ if __name__ == '__main__':
     fl.DEFINE_string('dataset_name', "fashionstyle14", "")
     fl.DEFINE_string('phase_name', "train", "")
     fl.DEFINE_string('image_dir',
-                     'D:/data/fashion/fashion_style14_v1/FashionStyle14_v1/tfrecord-rtv-images', '')
+                     'D:/data/fashion/image_retrieval/images_for_tfrecord/warehouse2shopall', '')
     fl.DEFINE_string('tfrecord_output',
-                     'D:/data/fashion/fashion_style14_v1/FashionStyle14_v1/tfrecord-rtv',
+                     'D:/data/fashion/image_retrieval/images_for_tfrecord/warehouse2shopall_tfrecord',
                      '')
     fl.DEFINE_string('attr_path',
                      None,

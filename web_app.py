@@ -6,8 +6,12 @@ import numpy as np
 from numba import cuda
 import os, uuid, glob
 import util
+from PIL import Image
 
-import faiss
+try:
+    import faiss
+except:
+    pass
 
 checkpoint_dir = './experiments/'
 UPLOAD_DIR = 'static/upload'
@@ -164,6 +168,54 @@ def upload():
             return redirect(url_for('.search', file_name=file_name))
 
     return redirect(request.url)
+
+
+@app.route('/crop_upload', methods=['GET', 'POST'])
+def crop_upload():
+    if not os.path.isdir(UPLOAD_DIR):
+        os.makedirs(UPLOAD_DIR)
+    if request.method == 'POST':
+        if 'file' not in request.files:
+            print('No file part')
+            return redirect(request.url)
+        file = request.files['file']
+        if file.filename == '':
+            print('No selected file')
+            return redirect(request.url)
+        if file and allowed_file(file.filename):
+            file_name = file.filename
+            file_name = "%s_%s" % (uuid.uuid4(), file_name)
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], file_name)
+            file.save(file_path)
+            return redirect(url_for('.crop_search', file_name=file_name))
+
+    return redirect(request.url)
+
+
+@app.route("/crop_search")
+def crop_search():
+    return render_template("crop_search.html", query_file_name=request.args['file_name'])
+
+
+@app.route("/do_crop_search")
+def do_crop_search():
+    file_path = os.path.join(app.config['UPLOAD_FOLDER'], request.args['file_name'])
+    x = int(float(request.args['x']))
+    y = int(float(request.args['y']))
+    w = int(float(request.args['w']))
+    h = int(float(request.args['h']))
+    if x < 0:
+        w += x
+        x = 0
+    if y < 0:
+        h += y
+        y = 0
+
+    im = Image.open(file_path)
+    im = im.crop((x, y, x + w, y + h))
+    file_path = os.path.join(app.config['UPLOAD_FOLDER'], "crop_" + request.args['file_name'])
+    im.save(file_path)
+    return redirect(url_for('.search', file_name="crop_" + request.args['file_name']))
 
 
 @app.route("/search")
